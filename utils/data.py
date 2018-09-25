@@ -10,13 +10,7 @@ def make_data(args, data_transform):
   if "STL10" == args.dataset:
     dataset_class = torchvision.datasets.STL10
 
-    if args.deepcluster_mode == "features":
-      train_partitions = ["train+unlabeled", "test"]
-    elif args.deepcluster_mode == "direct":
-      train_partitions = ["train", "test"] # labelled only
-    else:
-      assert(False)
-
+    train_partitions = ["train+unlabeled", "test"]
     mapping_partitions = ["train", "test"] # labelled only
 
   if "CIFAR" in args.dataset:

@@ -16,6 +16,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
+from datetime import datetime
 
 import clustering
 import models
@@ -25,7 +26,6 @@ from utils.data import make_data
 parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
 parser.add_argument('--model_ind', type=int, required=True)
-parser.add_argument('--deepcluster_mode', type=str, required=True) # features or direct
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
@@ -70,7 +70,6 @@ parser.add_argument('--checkpoints', type=int, default=25000,
                     help='how many iterations between two checkpoints (default: 25000)')
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
-
 
 _DATASET_NORM = {
   "STL10": ([], []),
@@ -135,9 +134,13 @@ def main():
            transforms.CenterCrop(args.crop_sz),
            transforms.ToTensor()]
 
+    args.data_mean = None # toggled on in cluster_assign
+    args.data_std = None
     if _DATASET_NORM[args.dataset] is not None:
       data_mean, data_std = _DATASET_NORM[args.dataset]
-      normalize = transforms.Normalize(mean=data_mean, std=data_std)
+      args.data_mean = data_mean
+      args.data_std = data_std
+      normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
       tra.append(normalize)
 
     # load the data
@@ -159,7 +162,8 @@ def main():
         clustering_loss = deepcluster.cluster(features, verbose=args.verbose)
 
         # assign pseudo-labels
-        train_dataset = clustering.cluster_assign(deepcluster.images_lists,
+        train_dataset = clustering.cluster_assign(args,
+                                                  deepcluster.images_lists,
                                                   dataset.imgs)
 
         # uniformely sample per target
@@ -175,7 +179,7 @@ def main():
         )
 
         # set last fully connected layer
-        # top layer is created from new in each epoch!
+        # top layer is created from new in each epoch! O_O
         mlp = list(model.classifier.children())
         mlp.append(nn.ReLU(inplace=True).cuda())
         model.classifier = nn.Sequential(*mlp)
@@ -185,17 +189,12 @@ def main():
         model.top_layer.cuda()
 
         # train network with clusters as pseudo-labels
-        end = time.time()
         loss = train(train_dataloader, model, criterion, optimizer, epoch)
 
         # print log
         if args.verbose:
-            print('###### Epoch [{0}] ###### \n'
-                  'Time: {1:.3f} s\n'
-                  'Clustering loss: {2:.3f} \n'
-                  'ConvNet loss: {3:.3f}'
-                  .format(epoch, time.time() - end, clustering_loss, loss))
-            print('####################### \n')
+            print("epoch %d, time %s, cluster loss %f, train loss %s"
+                  % (epoch, datetime.now(), clustering_loss, loss))
 
         # assess
 
