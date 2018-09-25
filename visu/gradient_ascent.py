@@ -6,18 +6,17 @@
 #
 import argparse
 import os
-from scipy.ndimage.filters import gaussian_filter
 import sys
 
 import numpy as np
-from PIL import Image
 import torch
 import torch.nn as nn
-import torchvision
 import torchvision.transforms as transforms
+from PIL import Image
+from scipy.ndimage.filters import gaussian_filter
 
 sys.path.insert(0, '..')
-from util import load_model
+from utils.util import load_model
 
 parser = argparse.ArgumentParser(description='Gradient ascent visualisation')
 parser.add_argument('--model', type=str, help='Model')

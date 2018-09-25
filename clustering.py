@@ -202,6 +202,8 @@ class Kmeans:
         xb = preprocess_features(data)
 
         # cluster the data
+        # I: data index -> k means cluster index
+        # images_lists: k means cluster index -> data index
         I, loss = run_kmeans(xb, self.k, verbose)
         self.images_lists = [[] for i in range(self.k)]
         for i in range(len(data)):

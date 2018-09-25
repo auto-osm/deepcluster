@@ -3,7 +3,7 @@ import torch.nn as nn
 import math
 from random import random as rd
 
-__all__ = [ 'VGG', 'vgg16']
+__all__ = [ 'VGG', 'vgg11']
 
 
 class VGG(nn.Module):
@@ -64,11 +64,10 @@ class VGG(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
-
 def make_layers(input_dim, batch_norm):
     layers = []
     in_channels = input_dim
-    cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M']
+    cfg = [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]

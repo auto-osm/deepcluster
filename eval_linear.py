@@ -11,14 +11,14 @@ import time
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
+import torch.nn as nn
 import torch.optim
 import torch.utils.data
-import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torchvision.transforms as transforms
 
-from util import AverageMeter, learning_rate_decay, load_model, Logger
+from utils.util import AverageMeter, learning_rate_decay, load_model, Logger
 
 parser = argparse.ArgumentParser(description="""Train linear classifier on top
                                  of frozen convolutional layers of an AlexNet.""")

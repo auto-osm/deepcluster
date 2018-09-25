@@ -1,2 +1,2 @@
-from .vgg16 import *
+from .vgg11 import *
 from .alexnet import *

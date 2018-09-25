@@ -6,35 +6,37 @@
 #
 import argparse
 import os
-import pickle
 import time
 
-import faiss
 import numpy as np
-from sklearn.metrics.cluster import normalized_mutual_info_score
 import torch
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 
 import clustering
 import models
-from util import AverageMeter, Logger, UnifLabelSampler
-
+from utils.util import AverageMeter, UnifLabelSampler
+from utils.data import make_data
 
 parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
 parser.add_argument('--model_ind', type=int, required=True)
-parser.add_argument('--eval_mode', type=str, required=True) # features or direct
+parser.add_argument('--deepcluster_mode', type=str, required=True) # features or direct
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
+parser.add_argument('--resize_sz', type=int, required=True)
+parser.add_argument('--crop_sz', type=int, required=True)
+
 parser.add_argument("--dataset", type=str, required=True)
 parser.add_argument("--dataset_root", type=str, required=True)
+
+parser.add_argument('--batch_sz', default=256, type=int,
+                    help='mini-batch size (default: 256)')
 
 parser.add_argument("--out_root", type=str,
                     default="/scratch/shared/slow/xuji/deepcluster")
@@ -42,7 +44,7 @@ parser.add_argument("--out_root", type=str,
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
-                    choices=['alexnet', 'vgg16'], default='alexnet',
+                    choices=['alexnet', 'vgg11'], default='alexnet',
                     help='CNN architecture (default: alexnet)')
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
@@ -54,14 +56,13 @@ parser.add_argument('--wd', default=-5, type=float,
 parser.add_argument('--reassign', type=float, default=1.,
                     help="""how many epochs of training between two consecutive
                     reassignments of clusters (default: 1)""")
-parser.add_argument('--workers', default=4, type=int,
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('--workers', default=0, type=int,
+                    help='number of data loading workers (default: 0)')
 parser.add_argument('--epochs', type=int, default=200,
                     help='number of total epochs to run (default: 200)')
 parser.add_argument('--start_epoch', default=0, type=int,
                     help='manual epoch number (useful on restarts) (default: 0)')
-parser.add_argument('--batch', default=256, type=int,
-                    help='mini-batch size (default: 256)')
+
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum (default: 0.9)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to checkpoint (default: None)')
@@ -70,6 +71,13 @@ parser.add_argument('--checkpoints', type=int, default=25000,
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
 
+
+_DATASET_NORM = {
+  "STL10": ([], []),
+  "CIFAR10": ([], []),
+  "CIFAR20": ([], []),
+  "MNIST": None
+}
 
 def main():
     global args
@@ -122,38 +130,24 @@ def main():
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
-    # creating checkpoint repo
-    exp_check = os.path.join(args.exp, 'checkpoints')
-    if not os.path.isdir(exp_check):
-        os.makedirs(exp_check)
-
-    # creating cluster assignments log
-    cluster_log = Logger(os.path.join(args.exp, 'clusters'))
-
     # preprocessing of data
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    tra = [transforms.Resize(256),
-           transforms.CenterCrop(224),
-           transforms.ToTensor(),
-           normalize]
+    tra = [transforms.Resize(args.resize_sz),
+           transforms.CenterCrop(args.crop_sz),
+           transforms.ToTensor()]
+
+    if _DATASET_NORM[args.dataset] is not None:
+      data_mean, data_std = _DATASET_NORM[args.dataset]
+      normalize = transforms.Normalize(mean=data_mean, std=data_std)
+      tra.append(normalize)
 
     # load the data
-    end = time.time()
-    dataset = datasets.ImageFolder(args.data, transform=transforms.Compose(tra))
-    if args.verbose: print('Load dataset: {0:.2f} s'.format(time.time() - end))
-    dataloader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=args.batch,
-                                             num_workers=args.workers,
-                                             pin_memory=True)
+    dataset, dataloader, test_dataloader = make_data(args, tra)
 
     # clustering algorithm to use
     deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
 
     # training convnet with DeepCluster
     for epoch in range(args.start_epoch, args.epochs):
-        end = time.time()
-
         # remove head
         model.top_layer = None
         model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])
@@ -174,17 +168,18 @@ def main():
 
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
-            batch_size=args.batch,
+            batch_size=args.batch_sz,
             num_workers=args.workers,
             sampler=sampler,
             pin_memory=True,
         )
 
         # set last fully connected layer
+        # top layer is created from new in each epoch!
         mlp = list(model.classifier.children())
         mlp.append(nn.ReLU(inplace=True).cuda())
         model.classifier = nn.Sequential(*mlp)
-        model.top_layer = nn.Linear(fd, len(deepcluster.images_lists))
+        model.top_layer = nn.Linear(fd, args.k) # clearer
         model.top_layer.weight.data.normal_(0, 0.01)
         model.top_layer.bias.data.zero_()
         model.top_layer.cuda()
@@ -200,25 +195,18 @@ def main():
                   'Clustering loss: {2:.3f} \n'
                   'ConvNet loss: {3:.3f}'
                   .format(epoch, time.time() - end, clustering_loss, loss))
-            try:
-                nmi = normalized_mutual_info_score(
-                    clustering.arrange_clustering(deepcluster.images_lists),
-                    clustering.arrange_clustering(cluster_log.data[-1])
-                )
-                print('NMI against previous assignment: {0:.3f}'.format(nmi))
-            except IndexError:
-                pass
             print('####################### \n')
+
+        # assess
+
+        # draw graphs and save (args to file)
+
         # save running checkpoint
         torch.save({'epoch': epoch + 1,
                     'arch': args.arch,
                     'state_dict': model.state_dict(),
                     'optimizer' : optimizer.state_dict()},
                    os.path.join(args.exp, 'checkpoint.pth.tar'))
-
-        # save cluster assignments
-        cluster_log.log(deepcluster.images_lists)
-
 
 def train(loader, model, crit, opt, epoch):
     """Training of the CNN.
@@ -313,10 +301,11 @@ def compute_features(dataloader, model, N):
             features = np.zeros((N, aux.shape[1])).astype('float32')
 
         if i < len(dataloader) - 1:
-            features[i * args.batch: (i + 1) * args.batch] = aux.astype('float32')
+            features[i * args.batch_sz: (i + 1) * args.batch_sz] = aux.astype(
+              'float32')
         else:
             # special treatment for final batch
-            features[i * args.batch:] = aux.astype('float32')
+            features[i * args.batch_sz:] = aux.astype('float32')
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -327,7 +316,6 @@ def compute_features(dataloader, model, N):
                   'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})'
                   .format(i, len(dataloader), batch_time=batch_time))
     return features
-
 
 if __name__ == '__main__':
     main()

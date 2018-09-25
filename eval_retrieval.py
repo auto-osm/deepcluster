@@ -7,19 +7,19 @@
 
 
 import argparse
-from collections import OrderedDict
 import os
 import pickle
 import subprocess
 import sys
+from collections import OrderedDict
 
 import numpy as np
-from PIL import Image
 import torch
 import torchvision
+from PIL import Image
 from torch.autograd import Variable
 
-from util import load_model
+from utils.util import load_model
 
 
 class ImageHelper:

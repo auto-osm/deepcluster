@@ -6,18 +6,17 @@
 #
 import argparse
 import os
-from shutil import copyfile
 import sys
+from shutil import copyfile
 
 import numpy as np
-from PIL import Image
 import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torchvision.transforms as transforms
 
 sys.path.insert(0, '..')
-from util import load_model
+from utils.util import load_model
 
 parser = argparse.ArgumentParser(description='Retrieve images with maximal activations')
 parser.add_argument('--data', type=str, help='path to dataset')
