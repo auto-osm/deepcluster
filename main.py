@@ -28,15 +28,25 @@ from util import AverageMeter, Logger, UnifLabelSampler
 
 parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
-parser.add_argument('data', metavar='DIR', help='path to dataset')
+parser.add_argument('--model_ind', type=int, required=True)
+parser.add_argument('--eval_mode', type=str, required=True) # features or direct
+parser.add_argument('--k', type=int, required=True)
+parser.add_argument('--gt_k', type=int, required=True)
+
+parser.add_argument("--dataset", type=str, required=True)
+parser.add_argument("--dataset_root", type=str, required=True)
+
+parser.add_argument("--out_root", type=str,
+                    default="/scratch/shared/slow/xuji/deepcluster")
+
+# ----
+
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
                     choices=['alexnet', 'vgg16'], default='alexnet',
                     help='CNN architecture (default: alexnet)')
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                     default='Kmeans', help='clustering algorithm (default: Kmeans)')
-parser.add_argument('--nmb_cluster', '--k', type=int, default=10000,
-                    help='number of cluster for k-means (default: 10000)')
 parser.add_argument('--lr', default=0.05, type=float,
                     help='learning rate (default: 0.05)')
 parser.add_argument('--wd', default=-5, type=float,
@@ -58,13 +68,16 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
 parser.add_argument('--checkpoints', type=int, default=25000,
                     help='how many iterations between two checkpoints (default: 25000)')
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
-parser.add_argument('--exp', type=str, default='', help='path to exp folder')
 parser.add_argument('--verbose', action='store_true', help='chatty')
 
 
 def main():
     global args
     args = parser.parse_args()
+
+    args.out_dir = os.path.join(args.out_root, str(args.model_ind))
+    if not os.path.exists(args.out_dir):
+      os.makedirs(args.out_dir)
 
     # fix random seeds
     torch.manual_seed(args.seed)
