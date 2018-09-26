@@ -13,6 +13,12 @@ from torch.utils.data.sampler import Sampler
 
 import models
 
+def config_to_str(config):
+    attrs = vars(config)
+    string_val = "Config: -----\n"
+    string_val += "\n".join("%s: %s" % item for item in attrs.items())
+    string_val += "\n----------"
+    return string_val
 
 def load_model(path):
     """Loads model and return it without DataParallel table."""

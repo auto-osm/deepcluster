@@ -8,6 +8,12 @@ import argparse
 import os
 import time
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import sys
+
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -20,8 +26,10 @@ from datetime import datetime
 
 import clustering
 import models
-from utils.util import AverageMeter, UnifLabelSampler
+from utils.util import AverageMeter, UnifLabelSampler, config_to_str
 from utils.data import make_data
+from utils.eval import assess_acc
+import pickle
 
 parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
@@ -32,6 +40,8 @@ parser.add_argument('--gt_k', type=int, required=True)
 parser.add_argument('--resize_sz', type=int, required=True)
 parser.add_argument('--crop_sz', type=int, required=True)
 
+parser.add_argument('--normalize', action='store_true', default=False)
+
 parser.add_argument("--dataset", type=str, required=True)
 parser.add_argument("--dataset_root", type=str, required=True)
 
@@ -40,6 +50,9 @@ parser.add_argument('--batch_sz', default=256, type=int,
 
 parser.add_argument("--out_root", type=str,
                     default="/scratch/shared/slow/xuji/deepcluster")
+
+parser.add_argument('--resume', action='store_true', default=False)
+parser.add_argument('--checkpoint_granularity', type=int, default=1)
 
 # ----
 
@@ -58,19 +71,15 @@ parser.add_argument('--reassign', type=float, default=1.,
                     reassignments of clusters (default: 1)""")
 parser.add_argument('--workers', default=0, type=int,
                     help='number of data loading workers (default: 0)')
-parser.add_argument('--epochs', type=int, default=200,
+parser.add_argument('--total_epochs', type=int, default=200,
                     help='number of total epochs to run (default: 200)')
-parser.add_argument('--start_epoch', default=0, type=int,
-                    help='manual epoch number (useful on restarts) (default: 0)')
 
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum (default: 0.9)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to checkpoint (default: None)')
-parser.add_argument('--checkpoints', type=int, default=25000,
-                    help='how many iterations between two checkpoints (default: 25000)')
+
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
 
+# TODO
 _DATASET_NORM = {
   "STL10": ([], []),
   "CIFAR10": ([], []),
@@ -84,12 +93,69 @@ def main():
 
     args.out_dir = os.path.join(args.out_root, str(args.model_ind))
     if not os.path.exists(args.out_dir):
-      os.makedirs(args.out_dir)
+        os.makedirs(args.out_dir)
+
+    if args.resume:
+        # get old args
+        old_args = args
+
+        reloaded_args_path = os.path.join(old_args.out_dir, "args.pickle")
+        print("Loading restarting args from: %s" % reloaded_args_path)
+        with open(reloaded_args_path, "rb") as args_f:
+          args = pickle.load(args_f)
+        assert (args.model_ind == old_args.model_ind)
+        args.resume = True
+
+        next_epoch = args.epoch + 1 # indexed from 0, also = num epochs passed
+
+        print("stored losses and accs lens %d %d %d, cutting to %d %d %d" %
+              (len(args.epoch_loss),
+               len(args.epoch_cluster_dist),
+               len(args.epoch_acc),
+               next_epoch,
+               next_epoch,
+               next_epoch + 1))
+
+        args.epoch_loss = args.epoch_loss[:next_epoch]
+        args.epoch_cluster_dist = args.cluster_dist[:next_epoch]
+        args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
+    else:
+        args.epoch_acc = []
+        args.epoch_cluster_dist = []
+        args.epoch_loss = [] # train loss
+
+        next_epoch = 0
+
+    print("args:")
+    print(config_to_str(args))
 
     # fix random seeds
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
+
+    fig, axarr = plt.subplots(3, sharex=False, figsize=(20, 20))
+
+    # Data ---------------------------------------------------------------------
+
+    # preprocessing of data
+    tra = [transforms.Resize(args.resize_sz),
+           transforms.CenterCrop(args.crop_sz),
+           transforms.ToTensor()]
+
+    args.data_mean = None # toggled on in cluster_assign
+    args.data_std = None
+    if args.normalize:
+        data_mean, data_std = _DATASET_NORM[args.dataset]
+        args.data_mean = data_mean
+        args.data_std = data_std
+        normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
+        tra.append(normalize)
+
+    # load the data
+    dataset, dataloader, test_dataset, test_dataloader = make_data(args, tra)
+
+    # Model --------------------------------------------------------------------
 
     # CNN
     if args.verbose:
@@ -109,48 +175,30 @@ def main():
         weight_decay=10**args.wd,
     )
 
+    if args.resume:
+        # remove top_layer parameters from checkpoint
+        checkpoint = torch.load(os.path.join(old_args.out_dir, "latest.pytorch"))
+        for key in checkpoint['state_dict']:
+            if 'top_layer' in key:
+                del checkpoint['state_dict'][key]
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+
     # define loss function
     criterion = nn.CrossEntropyLoss().cuda()
 
-    # optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            # remove top_layer parameters from checkpoint
-            for key in checkpoint['state_dict']:
-                if 'top_layer' in key:
-                    del checkpoint['state_dict'][key]
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
-    # preprocessing of data
-    tra = [transforms.Resize(args.resize_sz),
-           transforms.CenterCrop(args.crop_sz),
-           transforms.ToTensor()]
-
-    args.data_mean = None # toggled on in cluster_assign
-    args.data_std = None
-    if _DATASET_NORM[args.dataset] is not None:
-      data_mean, data_std = _DATASET_NORM[args.dataset]
-      args.data_mean = data_mean
-      args.data_std = data_std
-      normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
-      tra.append(normalize)
-
-    # load the data
-    dataset, dataloader, test_dataloader = make_data(args, tra)
-
     # clustering algorithm to use
-    deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
+    deepcluster = clustering.__dict__[args.clustering](args.k)
 
-    # training convnet with DeepCluster
-    for epoch in range(args.start_epoch, args.epochs):
+    if not args.resume:
+        print("Doing pre-training assessment")
+        acc = assess_acc(test_dataloader, model, len(test_dataset))
+        args.epoch_acc.append(acc)
+        print("got %f" % acc)
+        sys.stdout.flush()
+
+    # Train --------------------------------------------------------------------
+    for epoch in range(next_epoch, args.total_epochs):
         # remove head
         model.top_layer = None
         model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])
@@ -161,7 +209,7 @@ def main():
         # cluster the features
         clustering_loss = deepcluster.cluster(features, verbose=args.verbose)
 
-        # assign pseudo-labels
+        # assign pseudo-labels to make new dataset
         train_dataset = clustering.cluster_assign(args,
                                                   deepcluster.images_lists,
                                                   dataset.imgs)
@@ -191,23 +239,66 @@ def main():
         # train network with clusters as pseudo-labels
         loss = train(train_dataloader, model, criterion, optimizer, epoch)
 
-        # print log
-        if args.verbose:
-            print("epoch %d, time %s, cluster loss %f, train loss %s"
-                  % (epoch, datetime.now(), clustering_loss, loss))
 
-        # assess
+        # assess ---------------------------------------------------------------
+        acc = assess_acc(test_dataloader, model, len(test_dataset))
 
-        # draw graphs and save (args to file)
+        print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
+              "time %s"
+              % (args.model_ind, epoch, clustering_loss, loss, acc,
+                 datetime.now()))
+        sys.stdout.flush()
 
-        # save running checkpoint
-        torch.save({'epoch': epoch + 1,
-                    'arch': args.arch,
-                    'state_dict': model.state_dict(),
-                    'optimizer' : optimizer.state_dict()},
-                   os.path.join(args.exp, 'checkpoint.pth.tar'))
+        # update args
+        is_best = False
+        if acc > max(args.epoch_acc):
+            is_best = True
 
-def train(loader, model, crit, opt, epoch):
+        args.epoch_acc.append(acc)
+        args.epoch_loss.append(loss)
+        args.epoch_cluster_dist.append(clustering_loss)
+
+        # draw graphs and save
+        axarr[0].clear()
+        axarr[0].plot(args.epoch_acc)
+        axarr[0].set_title("Acc")
+
+        axarr[1].clear()
+        axarr[1].plot(args.epoch_loss)
+        axarr[1].set_title("Training loss")
+
+        axarr[2].clear()
+        axarr[2].plot(args.epoch_cluster_dist)
+        axarr[2].set_title("Cluster distance")
+
+        # save -----------------------------------------------------------------
+        # graph
+        fig.canvas.draw_idle()
+        fig.savefig(os.path.join(args.out_dir, "plots.png"))
+
+        # model
+        if epoch % args.checkpoint_granularity == 0:
+            torch.save({'state_dict': model.state_dict(),
+                        'optimizer' : optimizer.state_dict()},
+                       os.path.join(args.out_dir, "latest.pytorch"))
+
+            args.epoch = epoch # last saved checkpoint
+
+        if is_best:
+            torch.save({'state_dict': model.state_dict(),
+                        'optimizer' : optimizer.state_dict()},
+                       os.path.join(args.out_dir, "best.pytorch"))
+
+            args.best_epoch = epoch # last saved checkpoint
+
+        # args
+        with open(os.path.join(args.out_dir, "args.pickle"), 'w') as outfile:
+            pickle.dump(args, outfile)
+
+        with open(os.path.join(args.out_dir, "args.txt"), "w") as text_file:
+            text_file.write("%s" % args)
+
+def train(loader, model, crit, opt, epoch, per_batch=False):
     """Training of the CNN.
         Args:
             loader (torch.utils.data.DataLoader): Data loader
@@ -220,8 +311,6 @@ def train(loader, model, crit, opt, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
     data_time = AverageMeter()
-    forward_time = AverageMeter()
-    backward_time = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -238,22 +327,6 @@ def train(loader, model, crit, opt, epoch):
         data_time.update(time.time() - end)
 
         # save checkpoint
-        n = len(loader) * epoch + i
-        if n % args.checkpoints == 0:
-            path = os.path.join(
-                args.exp,
-                'checkpoints',
-                'checkpoint_' + str(n / args.checkpoints) + '.pth.tar',
-            )
-            if args.verbose:
-                print('Save checkpoint at: {0}'.format(path))
-            torch.save({
-                'epoch': epoch + 1,
-                'arch': args.arch,
-                'state_dict': model.state_dict(),
-                'optimizer' : opt.state_dict()
-            }, path)
-
         target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input_tensor.cuda())
         target_var = torch.autograd.Variable(target)
@@ -275,7 +348,7 @@ def train(loader, model, crit, opt, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if args.verbose and (i % 200) == 0:
+        if args.verbose and (((i % 200) == 0) or per_batch):
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -287,9 +360,9 @@ def train(loader, model, crit, opt, epoch):
 
 def compute_features(dataloader, model, N):
     if args.verbose:
-        print('Compute features')
-    batch_time = AverageMeter()
-    end = time.time()
+        print('Compute features...')
+        sys.stdout.flush()
+
     model.eval()
     # discard the label information in the dataloader
     for i, (input_tensor, _) in enumerate(dataloader):
@@ -306,14 +379,6 @@ def compute_features(dataloader, model, N):
             # special treatment for final batch
             features[i * args.batch_sz:] = aux.astype('float32')
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if args.verbose and (i % 200) == 0:
-            print('{0} / {1}\t'
-                  'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})'
-                  .format(i, len(dataloader), batch_time=batch_time))
     return features
 
 if __name__ == '__main__':

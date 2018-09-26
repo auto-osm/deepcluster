@@ -41,12 +41,12 @@ def make_data(args, data_transform):
                                  data_transform=data_transform,
                                  target_transform=None) # targets not used
 
-  _, mapping_dataloader = \
+  mapping_dataset, mapping_dataloader = \
     _make_dataset_and_dataloader(args, dataset_class, mapping_partitions,
                                  data_transform=data_transform,
                                  target_transform=target_transform)
 
-  return train_dataset, train_dataloader, mapping_dataloader
+  return train_dataset, train_dataloader, mapping_dataset, mapping_dataloader
 
 def _make_dataset_and_dataloader(args, dataset_class, partitions,
                                  data_transform, target_transform):

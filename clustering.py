@@ -141,7 +141,7 @@ def cluster_assign(args, images_lists, dataset):
                             transforms.RandomHorizontalFlip(),
                             transforms.ToTensor()]
 
-    if (args.data_mean is not None) and (args.data_std is not None):
+    if args.normalize:
       normalize = transforms.Normalize(mean=args.data_mean,
                                        std=args.data_std)
       tra.append(normalize)
