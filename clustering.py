@@ -137,9 +137,10 @@ def cluster_assign(args, images_lists, dataset):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
 
-    tra = [transforms.RandomResizedCrop(224),
-                            transforms.RandomHorizontalFlip(),
-                            transforms.ToTensor()]
+    # repeat transforms but not exactly, randomresizedcrop and horizontal flip
+    tra = [transforms.RandomResizedCrop(args.crop_sz),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor()]
 
     if args.normalize:
       normalize = transforms.Normalize(mean=args.data_mean,

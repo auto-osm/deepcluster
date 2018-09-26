@@ -27,7 +27,7 @@ from datetime import datetime
 import clustering
 import models
 from utils.util import AverageMeter, UnifLabelSampler, config_to_str, compute_acc
-from utils.data import make_data
+from utils.data import make_data, compute_data_stats
 import pickle
 
 from sklearn.utils.linear_assignment_ import linear_assignment
@@ -55,6 +55,8 @@ parser.add_argument("--out_root", type=str,
 
 parser.add_argument('--resume', action='store_true', default=False)
 parser.add_argument('--checkpoint_granularity', type=int, default=1)
+
+parser.add_argument('--find_data_stats', action='store_true', default=False)
 
 # ----
 
@@ -128,8 +130,9 @@ def main():
 
         next_epoch = 0
 
-    print("args:")
-    print(config_to_str(args))
+    if not args.find_data_stats:
+        print("args:")
+        print(config_to_str(args))
 
     # fix random seeds
     torch.manual_seed(args.seed)
@@ -147,7 +150,7 @@ def main():
 
     args.data_mean = None # toggled on in cluster_assign
     args.data_std = None
-    if args.normalize:
+    if args.normalize and (not args.find_data_stats):
         data_mean, data_std = _DATASET_NORM[args.dataset]
         args.data_mean = data_mean
         args.data_std = data_std
@@ -156,6 +159,13 @@ def main():
 
     # load the data
     dataset, dataloader, test_dataset, test_dataloader = make_data(args, tra)
+
+    if args.find_data_stats:
+        # use datasets not dataloader bc no need for tra
+        print(args.dataset)
+        print("train dataset mean, std: %s, %s" % compute_data_stats(dataset))
+        print("test dataset mean, std: %s, %s" % compute_data_stats(test_dataset))
+        exit(0)
 
     # Model --------------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 import torchvision
 import torch
 from torch.utils.data import ConcatDataset
+import numpy as np
 
 def make_data(args, data_transform):
   # return training dataset, training dataloader, and test dataloader
@@ -181,3 +182,16 @@ def _cifar100_to_cifar20(target):
     99: 13}
 
   return _dict[target]
+
+def compute_data_stats(dataset):
+    num_imgs = len(dataset)
+    for i, (img, _) in enumerate(dataset):
+        if i == 0:
+            print("img shape: %s" % list(img.shape))
+            h, w, c = img.shape
+            assert(c == 3 or c == 1)
+            imgs = np.zeros(num_imgs, h, w, c)
+
+        imgs[i, :, :, :] = img
+
+    return np.mean(imgs, axis=(0, 1, 2)), np.std(imgs, axis=(0, 1, 2))
