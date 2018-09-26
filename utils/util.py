@@ -124,3 +124,11 @@ class Logger():
         self.data.append(train_point)
         with open(os.path.join(self.path), 'wb') as fp:
             pickle.dump(self.data, fp, -1)
+
+def compute_acc(preds, targets, num_k):
+    assert (preds.shape == targets.shape)
+    acc = 0
+    for c in xrange(num_k):
+        curr_acc = ((preds == c) * (targets == c)).sum()  # TP
+        acc += curr_acc
+    return acc / float(preds.shape[0])

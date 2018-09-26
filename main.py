@@ -26,10 +26,12 @@ from datetime import datetime
 
 import clustering
 import models
-from utils.util import AverageMeter, UnifLabelSampler, config_to_str
+from utils.util import AverageMeter, UnifLabelSampler, config_to_str, compute_acc
 from utils.data import make_data
-from utils.eval import assess_acc
 import pickle
+
+from sklearn.utils.linear_assignment_ import linear_assignment
+
 
 parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
@@ -192,7 +194,8 @@ def main():
 
     if not args.resume:
         print("Doing pre-training assessment")
-        acc = assess_acc(test_dataloader, model, len(test_dataset))
+        acc = assess_acc(test_dataset, test_dataloader, model,
+                         len(test_dataset))
         args.epoch_acc.append(acc)
         print("got %f" % acc)
         sys.stdout.flush()
@@ -239,9 +242,8 @@ def main():
         # train network with clusters as pseudo-labels
         loss = train(train_dataloader, model, criterion, optimizer, epoch)
 
-
         # assess ---------------------------------------------------------------
-        acc = assess_acc(test_dataloader, model, len(test_dataset))
+        acc = assess_acc(test_dataset, test_dataloader, model, len(test_dataset))
 
         print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
               "time %s"
@@ -380,6 +382,39 @@ def compute_features(dataloader, model, N):
             features[i * args.batch_sz:] = aux.astype('float32')
 
     return features
+
+def assess_acc(test_dataset, test_dataloader, model, num_imgs):
+    # new clusterer
+    deepcluster = clustering.__dict__[args.clustering](args.k)
+    features = compute_features(test_dataloader, model, num_imgs)
+    _ = deepcluster.cluster(features, verbose=args.verbose)
+    relabelled_test_dataset = clustering.cluster_assign(args,
+                                             deepcluster.images_lists,
+                                             test_dataset.imgs)
+
+    assert(num_imgs == len(test_dataset))
+    assert(num_imgs == len(relabelled_test_dataset))
+
+    true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
+    predicted_labels = \
+        np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
+
+    assert(true_labels.min() >= 0)
+    assert(true_labels.max() < args.gt_k)
+    assert(predicted_labels.min() >= 0)
+    assert(predicted_labels.max() < args.gt_k)
+
+    # hungarian matching
+    num_correct = np.zeros((args.gt_k, args.gt_k))
+    for i in xrange(num_imgs):
+      num_correct[predicted_labels[i], true_labels[i]] += 1
+    match = linear_assignment(num_imgs - num_correct)
+
+    reordered_preds = np.zeros(num_imgs)
+    for pred_i, target_i in match:
+        reordered_preds[predicted_labels == pred_i] = target_i
+
+    return compute_acc(reordered_preds, true_labels, args.gt_k)
 
 if __name__ == '__main__':
     main()
