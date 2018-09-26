@@ -13,8 +13,8 @@ def make_data(args, data_transform):
 
     train_partitions = ["train+unlabeled", "test"]
     mapping_partitions = ["train", "test"] # labelled only
-
-  if "CIFAR" in args.dataset:
+    
+  elif "CIFAR" in args.dataset:
     if args.dataset == "CIFAR10":
       dataset_class = torchvision.datasets.CIFAR10
 
