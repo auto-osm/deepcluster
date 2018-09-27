@@ -65,7 +65,7 @@ class DeepClusterNet5g(ResNet):
 
         self.classifier = nn.Sequential(
             nn.Linear(512 * BasicBlock.expansion, 4096),
-            nn.BatchNorm2d(4096),
+            nn.BatchNorm1d(4096),
             nn.ReLU(True)
         )
 
