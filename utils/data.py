@@ -183,6 +183,26 @@ def _cifar100_to_cifar20(target):
 
   return _dict[target]
 
+
+"""
+STL10
+batch shape: [256, 3, 64, 64]
+train dataset mean, std: [0.45532353 0.43217013 0.3928851 ], [0.25528341 0.24733134 0.25604967]
+batch shape: [256, 3, 64, 64]
+test dataset mean, std: [0.45092908 0.43245607 0.40070766], [0.25320484 0.24809043 0.26007558]
+
+CIFAR10
+batch shape: [256, 3, 32, 32]
+train dataset mean, std: [0.49186879 0.48265392 0.44717729], [0.24697122 0.24338894 0.26159259]
+batch shape: [256, 3, 32, 32]
+test dataset mean, std: [0.49186879 0.48265392 0.44717729], [0.24697122 0.24338894 0.26159259]
+
+CIFAR20
+batch shape: [256, 3, 32, 32]
+train dataset mean, std: [0.50736205 0.48668957 0.44108858], [0.26748816 0.2565931  0.27630851]
+batch shape: [256, 3, 32, 32]
+test dataset mean, std: [0.50736205 0.48668957 0.44108858], [0.26748816 0.2565931  0.27630851]
+"""
 def compute_data_stats(dataloader, num_imgs):
     nb = len(dataloader)
     for i, (imgs_tensor, _) in enumerate(dataloader):
