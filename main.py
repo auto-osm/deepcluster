@@ -229,7 +229,7 @@ def main():
         # assign pseudo-labels to make new dataset
         train_dataset = clustering.cluster_assign(args,
                                                   deepcluster.images_lists,
-                                                  dataset.imgs)
+                                                  dataset)
 
         # uniformely sample per target
         sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),
