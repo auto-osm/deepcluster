@@ -370,12 +370,12 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         opt.step()
         optimizer_tl.step()
 
-        if args.verbose and (((i % 100) == 0) or per_batch):
+        if ((i % 100) == 0) or per_batch:
             print("... epoch %d batch %d train loss %f time %s" %
                   (epoch, i, float(loss.data), datetime.now()))
             sys.stdout.flush()
 
-        return losses.avg
+    return losses.avg
 
 def compute_features(dataloader, model, N, penultimate=False):
     model.eval()
