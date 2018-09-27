@@ -47,8 +47,6 @@ class ReassignedDataset(data.Dataset):
         self.imgs = self.make_dataset(image_indexes, pseudolabels, dataset)
         self.transform = transform
 
-        self.get_item_use_path = False
-
     def make_dataset(self, image_indexes, pseudolabels, dataset):
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
@@ -67,15 +65,13 @@ class ReassignedDataset(data.Dataset):
         """
         path, pseudolabel = self.imgs[index]
 
-        if not self.get_item_use_path:
-            # used for their code
+        """
             img = pil_loader(path)
             if self.transform is not None:
                 img = self.transform(img)
             return img, pseudolabel
-        else:
-            # used in our assess
-            return path, pseudolabel
+        """
+        return path, pseudolabel
 
     def __len__(self):
         return len(self.imgs)
