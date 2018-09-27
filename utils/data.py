@@ -188,13 +188,13 @@ def compute_data_stats(dataloader):
     for i, (imgs_tensor, _) in enumerate(dataloader):
         if i == 0:
             print("batch shape: %s" % list(imgs_tensor.shape))
-            bn, h, w, c = imgs_tensor.shape
+            bn, c, h, w = imgs_tensor.shape
             assert(c == 3 or c == 1)
-            imgs = np.zeros(bn * bn, h, w, c)
+            imgs = np.zeros(nb * bn, c, h, w)
 
         if i < nb - 1:
             imgs[i * bn: (i + 1) * bn, :, :, :] = imgs_tensor.numpy()
         else:
             imgs[i * bn:, :, :, :] = imgs_tensor.numpy()
 
-    return np.mean(imgs, axis=(0, 1, 2)), np.std(imgs, axis=(0, 1, 2))
+    return np.mean(imgs, axis=(0, 2, 3)), np.std(imgs, axis=(0, 2, 3))
