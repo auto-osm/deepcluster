@@ -207,7 +207,6 @@ class Kmeans:
             Args:
                 x_data (np.array N * dim): data to cluster
         """
-        end = time.time()
 
         # PCA-reducing, whitening and L2-normalization
         xb = preprocess_features(data)
