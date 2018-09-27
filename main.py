@@ -124,6 +124,9 @@ def main():
         args.epoch_loss = args.epoch_loss[:next_epoch]
         args.epoch_cluster_dist = args.epoch_cluster_dist[:next_epoch]
         args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
+
+        if not hasattr(args, 'resize_sz'):
+            args.resize_sz = None
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
