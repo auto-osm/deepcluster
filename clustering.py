@@ -77,7 +77,7 @@ class ReassignedDataset(data.Dataset):
         return len(self.imgs)
 
 
-def preprocess_features(npdata, pca=256):
+def preprocess_features(npdata):
     """Preprocess an array of features.
     Args:
         npdata (np.array N * ndim): features to preprocess
@@ -87,6 +87,9 @@ def preprocess_features(npdata, pca=256):
     """
     _, ndim = npdata.shape
     npdata =  npdata.astype('float32')
+
+    # quarter the dimensions
+    pca = int(ndim / 4.)
 
     # Apply PCA-whitening with Faiss
     mat = faiss.PCAMatrix (ndim, pca, eigen_power=-0.5)

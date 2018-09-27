@@ -1,15 +1,15 @@
 import torch.nn as nn
 from vgg import VGGTrunk, VGGNet
 
-# 4h but for cifar, 24x24
+# for 24x24
 
-class ClusterNet6cTrunk(VGGTrunk):
+class DeepClusterNet6cTrunk(VGGTrunk):
   def __init__(self, config):
-    super(ClusterNet6cTrunk, self).__init__()
+    super(DeepClusterNet6cTrunk, self).__init__()
 
     self.conv_size = 5
     self.pad = 2
-    self.cfg = ClusterNet6c.cfg
+    self.cfg = DeepClusterNet6c.cfg
     self.in_channels = config.in_channels if hasattr(config, 'in_channels') \
       else 3
 
@@ -21,12 +21,12 @@ class ClusterNet6cTrunk(VGGTrunk):
     x = x.view(bn, nf * h * w)
     return x
 
-class ClusterNet6cHead(nn.Module):
+class DeepClusterNet6cHead(nn.Module):
   def __init__(self, config):
-    super(ClusterNet6cHead, self).__init__()
+    super(DeepClusterNet6cHead, self).__init__()
     self.num_heads = config.num_heads
 
-    self.cfg = ClusterNet6c.cfg
+    self.cfg = DeepClusterNet6c.cfg
     num_features = self.cfg[-1][0]
     self.heads = nn.ModuleList([nn.Sequential(
       nn.Linear(num_features * 3 * 3, config.output_k),
@@ -41,15 +41,15 @@ class ClusterNet6cHead(nn.Module):
         results.append(self.heads[i](x))
     return results
 
-class ClusterNet6c(VGGNet):
+class DeepClusterNet6c(VGGNet):
   cfg = [(64, 1), ('M', None), (128, 1), ('M', None),
            (256, 1), ('M', None), (512, 1)]
 
   def __init__(self, config):
-    super(ClusterNet6c, self).__init__()
+    super(DeepClusterNet6c, self).__init__()
 
-    self.trunk = ClusterNet6cTrunk(config)
-    self.head = ClusterNet6cHead(config)
+    self.trunk = DeepClusterNet6cTrunk(config)
+    self.head = DeepClusterNet6cHead(config)
 
     self._initialize_weights()
 
