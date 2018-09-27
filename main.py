@@ -175,7 +175,8 @@ def main():
     # CNN
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
-    model = models.__dict__[args.arch](sobel=args.sobel)
+    model = models.__dict__[args.arch](sobel=args.sobel, out=args.gt_k,
+                                       input_sp_sz=args.args.crop_sz)
     fd = int(model.top_layer.weight.size()[1])
     model.top_layer = None
     model.features = torch.nn.DataParallel(model.features)

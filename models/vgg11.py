@@ -8,11 +8,17 @@ __all__ = [ 'VGG', 'vgg11']
 
 class VGG(nn.Module):
 
-    def __init__(self, features, num_classes, sobel):
+    def __init__(self, features, num_classes, sobel, input_sp_sz=None):
         super(VGG, self).__init__()
+
+        if input_sp_sz == 64 or input_sp_sz == 32:
+            linear_sz = 2
+        else:
+            assert(False)
+
         self.features = features
         self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
+            nn.Linear(512 * linear_sz * linear_sz, 4096),
             nn.ReLU(True),
             nn.Dropout(0.5),
             nn.Linear(4096, 4096),
@@ -39,14 +45,9 @@ class VGG(nn.Module):
             self.sobel = None
 
     def forward(self, x):
-        print("input size: %s" % list(x.shape))
-
         if self.sobel:
             x = self.sobel(x)
         x = self.features(x)
-
-        print("size: %s" % list(x.shape))
-        exit(0)
 
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
@@ -70,10 +71,17 @@ class VGG(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
-def make_layers(input_dim, batch_norm):
+def make_layers(input_dim, batch_norm, input_sp_sz=None):
     layers = []
     in_channels = input_dim
-    cfg = [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
+
+    if input_sp_sz == 64:
+        cfg = [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
+    elif input_sp_sz == 32:
+        cfg = [64, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']
+    else:
+        assert (False)
+
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -87,7 +95,7 @@ def make_layers(input_dim, batch_norm):
     return nn.Sequential(*layers)
 
 
-def vgg11(sobel=False, bn=True, out=1000):
+def vgg11(sobel=False, bn=True, out=None, input_sp_sz=None):
     dim = 2 + int(not sobel)
-    model = VGG(make_layers(dim, bn), out, sobel)
+    model = VGG(make_layers(dim, bn, input_sp_sz), out, sobel, input_sp_sz)
     return model
