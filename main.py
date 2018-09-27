@@ -39,7 +39,7 @@ parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
-parser.add_argument('--resize_sz', type=int, required=True)
+#parser.add_argument('--resize_sz', type=int, required=True)
 parser.add_argument('--crop_sz', type=int, required=True)
 
 parser.add_argument('--normalize', action='store_true', default=False)
@@ -154,9 +154,9 @@ def main():
             args.input_ch = 3
 
     # preprocessing of data
-    tra = [transforms.Resize(args.resize_sz),
-           transforms.CenterCrop(args.crop_sz),
-           transforms.ToTensor()]
+    tra = [transforms.RandomResizedCrop(args.crop_sz),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor()]
 
     args.data_mean = None # toggled on in cluster_assign
     args.data_std = None
@@ -228,7 +228,8 @@ def main():
     for epoch in range(next_epoch, args.total_epochs):
         # remove head
         model.top_layer = None
-        model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])
+        #model.classifier = nn.Sequential(*list(model.classifier.children())[
+        # :-1])
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
