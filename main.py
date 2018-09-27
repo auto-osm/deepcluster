@@ -400,7 +400,7 @@ def compute_features(dataloader, model, N):
 
 def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     # new clusterer
-    deepcluster = clustering.__dict__[args.clustering](args.k)
+    deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
     _ = deepcluster.cluster(features, verbose=args.verbose)
     relabelled_test_dataset = clustering.cluster_assign(args,
