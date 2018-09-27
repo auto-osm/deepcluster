@@ -256,9 +256,13 @@ def main():
 
         # set last fully connected layer
         # top layer is created from new in each epoch! O_O
+        """
         mlp = list(model.classifier.children())
         mlp.append(nn.ReLU(inplace=True).cuda())
         model.classifier = nn.Sequential(*mlp)
+        """
+        if epoch == next_epoch:
+            print("fd length: %d" % fd)
         model.top_layer = nn.Linear(fd, args.k) # clearer
         model.top_layer.weight.data.normal_(0, 0.01)
         model.top_layer.bias.data.zero_()
