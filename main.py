@@ -164,8 +164,10 @@ def main():
 
     if args.find_data_stats:
         print(args.dataset)
-        print("train dataset mean, std: %s, %s" % compute_data_stats(dataloader))
-        print("test dataset mean, std: %s, %s" % compute_data_stats(test_dataloader))
+        print("train dataset mean, std: %s, %s" %
+              compute_data_stats(dataloader, len(dataset)))
+        print("test dataset mean, std: %s, %s" %
+              compute_data_stats(test_dataloader, len(test_dataset)))
         exit(0)
 
     # Model --------------------------------------------------------------------

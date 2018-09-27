@@ -183,14 +183,14 @@ def _cifar100_to_cifar20(target):
 
   return _dict[target]
 
-def compute_data_stats(dataloader):
+def compute_data_stats(dataloader, num_imgs):
     nb = len(dataloader)
     for i, (imgs_tensor, _) in enumerate(dataloader):
         if i == 0:
             print("batch shape: %s" % list(imgs_tensor.shape))
             bn, c, h, w = imgs_tensor.shape
             assert(c == 3 or c == 1)
-            imgs = np.zeros((nb * bn, c, h, w))
+            imgs = np.zeros((num_imgs, c, h, w))
 
         if i < nb - 1:
             imgs[i * bn: (i + 1) * bn, :, :, :] = imgs_tensor.numpy()
