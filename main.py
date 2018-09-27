@@ -39,7 +39,7 @@ parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
-#parser.add_argument('--resize_sz', type=int, required=True)
+parser.add_argument('--resize_sz', type=int, default=None)
 parser.add_argument('--crop_sz', type=int, required=True)
 
 parser.add_argument('--normalize', action='store_true', default=False)
@@ -154,7 +154,10 @@ def main():
             args.input_ch = 3
 
     # preprocessing of data
-    tra = [transforms.RandomResizedCrop(args.crop_sz),
+    tra = []
+    if args.resize_sz is not None:
+        tra.append(transforms.Resize(args.resize_sz))
+    tra += [transforms.RandomCrop(args.crop_sz),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor()]
 
@@ -240,7 +243,8 @@ def main():
         # assign pseudo-labels to make new dataset
         train_dataset = clustering.cluster_assign(args,
                                                   deepcluster.images_lists,
-                                                  dataset)
+                                                  dataset,
+                                                  tra=tra)
 
         # uniformely sample per target
         sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),

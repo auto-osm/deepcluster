@@ -127,7 +127,7 @@ def make_graph(xb, nnn):
     return I, D
 
 
-def cluster_assign(args, images_lists, dataset):
+def cluster_assign(args, images_lists, dataset, tra=None):
     """Creates a dataset from clustering, with clusters as labels.
     Args:
         images_lists (list of list): for each cluster, the list of image indexes
@@ -143,18 +143,6 @@ def cluster_assign(args, images_lists, dataset):
     for cluster, images in enumerate(images_lists):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
-
-    # repeat transforms but not exactly, randomresizedcrop and horizontal flip
-    tra = [transforms.RandomResizedCrop(args.crop_sz),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()]
-
-    if args.normalize:
-      normalize = transforms.Normalize(mean=args.data_mean,
-                                       std=args.data_std)
-      tra.append(normalize)
-
-    tra = transforms.Compose(tra)
 
     return ReassignedDataset(image_indexes, pseudolabels, dataset, tra)
 
