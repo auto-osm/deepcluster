@@ -61,8 +61,8 @@ parser.add_argument('--find_data_stats', action='store_true', default=False)
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
-                    choices=['alexnet', 'vgg11'], default='alexnet',
-                    help='CNN architecture (default: alexnet)')
+                    choices=['alexnet', 'vgg11', 'deepcluster_net6c'],
+                    required=True)
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                     default='Kmeans', help='clustering algorithm (default: Kmeans)')
