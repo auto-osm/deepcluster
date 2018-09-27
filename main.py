@@ -264,7 +264,8 @@ def main():
         model.top_layer.cuda()
 
         # train network with clusters as pseudo-labels
-        loss = train(train_dataloader, model, criterion, optimizer, epoch)
+        loss = train(train_dataloader, model, criterion, optimizer, epoch,
+                     per_batch=(epoch == next_epoch))
 
         # assess ---------------------------------------------------------------
         acc = assess_acc(test_dataset, test_dataloader, model, len(test_dataset))
@@ -334,9 +335,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
                                    requires_grad in model except top layer
             epoch (int)
     """
-    batch_time = AverageMeter()
     losses = AverageMeter()
-    data_time = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -350,7 +349,6 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     end = time.time()
     for i, (input_tensor, target) in enumerate(loader):
-        data_time.update(time.time() - end)
 
         # save checkpoint
         target = target.cuda(async=True)
@@ -370,25 +368,14 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         opt.step()
         optimizer_tl.step()
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if args.verbose and (((i % 200) == 0) or per_batch):
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss: {loss.val:.4f} ({loss.avg:.4f})'
-                  .format(epoch, i, len(loader), batch_time=batch_time,
-                          data_time=data_time, loss=losses))
+        if args.verbose and (((i % 100) == 0) or per_batch):
+            print("... epoch %d batch %d train loss %f time %s" %
+                  (epoch, i, float(loss.data), datetime.now()))
+            sys.stdout.flush()
 
         return losses.avg
 
 def compute_features(dataloader, model, N, penultimate=False):
-    if args.verbose:
-        print('Compute features...')
-        sys.stdout.flush()
-
     model.eval()
     # discard the label information in the dataloader
     for i, (input_tensor, _) in enumerate(dataloader):

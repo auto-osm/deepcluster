@@ -183,8 +183,7 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     clus.train(x, index)
     _, I = index.search(x, 1)
     losses = faiss.vector_to_array(clus.obj)
-    if verbose:
-        print('k-means loss evolution: {0}'.format(losses))
+    #if verbose: print('k-means loss evolution: {0}'.format(losses))
 
     return [int(n[0]) for n in I], losses[-1]
 
@@ -221,8 +220,8 @@ class Kmeans:
         for i in range(len(data)):
             self.images_lists[I[i]].append(i)
 
-        if verbose:
-            print('k-means time: {0:.0f} s'.format(time.time() - end))
+        #if verbose:
+        #    print('k-means time: {0:.0f} s'.format(time.time() - end))
 
         return loss
 
