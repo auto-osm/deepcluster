@@ -48,6 +48,10 @@ class AlexNet(nn.Module):
         if self.sobel:
             x = self.sobel(x)
         x = self.features(x)
+
+        print("size: %s" % list(x.shape))
+        exit(0)
+
         x = x.view(x.size(0), 256 * 6 * 6)
         x = self.classifier(x)
         if self.top_layer:

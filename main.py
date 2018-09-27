@@ -83,11 +83,11 @@ parser.add_argument('--momentum', default=0.9, type=float, help='momentum (defau
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
 
-# TODO
+# means, std
 _DATASET_NORM = {
-  "STL10": ([], []),
-  "CIFAR10": ([], []),
-  "CIFAR20": ([], []),
+  "STL10": ([0.45532353, 0.43217013, 0.3928851], [0.25528341, 0.24733134, 0.25604967]),
+  "CIFAR10": ([0.49186879, 0.48265392, 0.44717729], [0.24697122, 0.24338894, 0.26159259]),
+  "CIFAR20": ([0.50736205, 0.48668957, 0.44108858], [0.26748816, 0.2565931, 0.27630851]),
   "MNIST": None
 }
 
