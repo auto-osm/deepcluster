@@ -69,5 +69,4 @@ class DeepClusterNet6c(VGGNet):
         return x
 
 def deepcluster_net6c(sobel=False, out=None, input_sp_sz=None, input_ch=None):
-    assert(False)
     return DeepClusterNet6c(sobel, out, input_sp_sz, input_ch)
