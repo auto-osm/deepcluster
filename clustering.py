@@ -147,9 +147,9 @@ def cluster_assign(args, images_lists, dataset):
                                        std=args.data_std)
       tra.append(normalize)
 
-    t = transforms.Compose(tra)
+    tra = transforms.Compose(tra)
 
-    return ReassignedDataset(image_indexes, pseudolabels, dataset, t)
+    return ReassignedDataset(image_indexes, pseudolabels, dataset, tra)
 
 
 def run_kmeans(x, nmb_clusters, verbose=False):

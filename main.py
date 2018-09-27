@@ -157,14 +157,15 @@ def main():
         normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
         tra.append(normalize)
 
+    tra = transforms.Compose(tra)
+
     # load the data
     dataset, dataloader, test_dataset, test_dataloader = make_data(args, tra)
 
     if args.find_data_stats:
-        # use datasets not dataloader bc no need for tra
         print(args.dataset)
-        print("train dataset mean, std: %s, %s" % compute_data_stats(dataset))
-        print("test dataset mean, std: %s, %s" % compute_data_stats(test_dataset))
+        print("train dataset mean, std: %s, %s" % compute_data_stats(dataloader))
+        print("test dataset mean, std: %s, %s" % compute_data_stats(test_dataloader))
         exit(0)
 
     # Model --------------------------------------------------------------------

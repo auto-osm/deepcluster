@@ -13,7 +13,7 @@ def make_data(args, data_transform):
 
     train_partitions = ["train+unlabeled", "test"]
     mapping_partitions = ["train", "test"] # labelled only
-    
+
   elif "CIFAR" in args.dataset:
     if args.dataset == "CIFAR10":
       dataset_class = torchvision.datasets.CIFAR10
@@ -183,15 +183,18 @@ def _cifar100_to_cifar20(target):
 
   return _dict[target]
 
-def compute_data_stats(dataset):
-    num_imgs = len(dataset)
-    for i, (img, _) in enumerate(dataset):
+def compute_data_stats(dataloader):
+    nb = len(dataloader)
+    for i, (imgs_tensor, _) in enumerate(dataloader):
         if i == 0:
-            print("img shape: %s" % list(img.shape))
-            h, w, c = img.shape
+            print("batch shape: %s" % list(imgs_tensor.shape))
+            bn, h, w, c = imgs_tensor.shape
             assert(c == 3 or c == 1)
-            imgs = np.zeros(num_imgs, h, w, c)
+            imgs = np.zeros(bn * bn, h, w, c)
 
-        imgs[i, :, :, :] = img
+        if i < nb - 1:
+            imgs[i * bn: (i + 1) * bn, :, :, :] = imgs_tensor.numpy()
+        else:
+            imgs[i * bn:, :, :, :] = imgs_tensor.numpy()
 
     return np.mean(imgs, axis=(0, 1, 2)), np.std(imgs, axis=(0, 1, 2))
