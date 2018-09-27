@@ -190,7 +190,7 @@ def compute_data_stats(dataloader):
             print("batch shape: %s" % list(imgs_tensor.shape))
             bn, c, h, w = imgs_tensor.shape
             assert(c == 3 or c == 1)
-            imgs = np.zeros(nb * bn, c, h, w)
+            imgs = np.zeros((nb * bn, c, h, w))
 
         if i < nb - 1:
             imgs[i * bn: (i + 1) * bn, :, :, :] = imgs_tensor.numpy()

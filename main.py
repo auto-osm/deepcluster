@@ -407,11 +407,10 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     assert(num_imgs == len(relabelled_test_dataset))
 
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
-    predicted_labels = \
-        np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
+    predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
 
-    assert(true_labels.min() >= 0)
-    assert(true_labels.max() < args.gt_k)
+    assert(true_labels.min() == 0)
+    assert(true_labels.max() == args.gt_k - 1)
     assert(predicted_labels.min() >= 0)
     assert(predicted_labels.max() < args.gt_k)
 
