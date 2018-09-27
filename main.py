@@ -122,7 +122,7 @@ def main():
                next_epoch + 1))
 
         args.epoch_loss = args.epoch_loss[:next_epoch]
-        args.epoch_cluster_dist = args.cluster_dist[:next_epoch]
+        args.epoch_cluster_dist = args.epoch_cluster_dist[:next_epoch]
         args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
     else:
         args.epoch_acc = []
