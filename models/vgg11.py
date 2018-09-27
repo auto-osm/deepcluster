@@ -39,6 +39,8 @@ class VGG(nn.Module):
             self.sobel = None
 
     def forward(self, x):
+        print("input size: %s" % list(x.shape))
+
         if self.sobel:
             x = self.sobel(x)
         x = self.features(x)

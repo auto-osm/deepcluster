@@ -45,11 +45,13 @@ class AlexNet(nn.Module):
             self.sobel = None
 
     def forward(self, x):
+        print("input size: %s" % list(x.shape))
+
         if self.sobel:
             x = self.sobel(x)
         x = self.features(x)
 
-        print("size: %s" % list(x.shape))
+        print("features size: %s" % list(x.shape))
         exit(0)
 
         x = x.view(x.size(0), 256 * 6 * 6)

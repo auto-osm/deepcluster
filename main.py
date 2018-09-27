@@ -381,8 +381,9 @@ def compute_features(dataloader, model, N):
     model.eval()
     # discard the label information in the dataloader
     for i, (input_tensor, _) in enumerate(dataloader):
-        input_var = torch.autograd.Variable(input_tensor.cuda(), volatile=True)
-        aux = model(input_var).data.cpu().numpy()
+        input_var = torch.autograd.Variable(input_tensor.cuda())
+        with torch.no_grad():
+            aux = model(input_var).data.cpu().numpy()
 
         if i == 0:
             features = np.zeros((N, aux.shape[1])).astype('float32')
