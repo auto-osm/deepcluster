@@ -405,7 +405,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     _ = deepcluster.cluster(features, verbose=args.verbose)
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
-                                             test_dataset.imgs)
+                                             test_dataset)
 
     assert(num_imgs == len(test_dataset))
     assert(num_imgs == len(relabelled_test_dataset))
