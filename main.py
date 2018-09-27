@@ -347,7 +347,9 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         weight_decay=10**args.wd,
     )
 
-    end = time.time()
+    if per_batch:
+        print("num batches: %d" % len(loader))
+
     for i, (input_tensor, target) in enumerate(loader):
 
         # save checkpoint
