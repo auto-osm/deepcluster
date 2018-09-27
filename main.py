@@ -143,6 +143,15 @@ def main():
 
     # Data ---------------------------------------------------------------------
 
+    if args.dataset == "MNIST":
+        assert(not args.sobel)
+        args.input_ch = 1
+    else:
+        if args.sobel:
+            args.input_ch = 2
+        else:
+            args.input_ch = 3
+
     # preprocessing of data
     tra = [transforms.Resize(args.resize_sz),
            transforms.CenterCrop(args.crop_sz),
@@ -176,7 +185,7 @@ def main():
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
     model = models.__dict__[args.arch](sobel=args.sobel, out=args.gt_k,
-                                       input_sp_sz=args.crop_sz)
+                                       input_sp_sz=args.crop_sz, input_ch=args.input_ch)
     fd = int(model.top_layer.weight.size()[1])
     model.top_layer = None
     model.features = torch.nn.DataParallel(model.features)
@@ -351,7 +360,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         loss = crit(output, target_var)
 
         # record loss
-        losses.update(loss.data[0], input_tensor.size(0))
+        losses.update(float(loss.data), input_tensor.size(0))
 
         # compute gradient and do SGD step
         opt.zero_grad()
