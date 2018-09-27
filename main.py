@@ -176,7 +176,7 @@ def main():
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
     model = models.__dict__[args.arch](sobel=args.sobel, out=args.gt_k,
-                                       input_sp_sz=args.args.crop_sz)
+                                       input_sp_sz=args.crop_sz)
     fd = int(model.top_layer.weight.size()[1])
     model.top_layer = None
     model.features = torch.nn.DataParallel(model.features)
@@ -305,7 +305,7 @@ def main():
                         'optimizer' : optimizer.state_dict()},
                        os.path.join(args.out_dir, "best.pytorch"))
 
-            args.best_epoch = epoch # last saved checkpoint
+            args.best_epoch = epoch
 
         # args
         with open(os.path.join(args.out_dir, "args.pickle"), 'w') as outfile:
