@@ -61,7 +61,8 @@ parser.add_argument('--find_data_stats', action='store_true', default=False)
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
-                    choices=['alexnet', 'vgg11', 'deepcluster_net6c'],
+                    choices=['alexnet', 'vgg11', 'deepcluster_net6c',
+                             'deepcluster_net5g'],
                     required=True)
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
@@ -383,7 +384,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
         return losses.avg
 
-def compute_features(dataloader, model, N):
+def compute_features(dataloader, model, N, penultimate=False):
     if args.verbose:
         print('Compute features...')
         sys.stdout.flush()
@@ -393,7 +394,7 @@ def compute_features(dataloader, model, N):
     for i, (input_tensor, _) in enumerate(dataloader):
         input_var = torch.autograd.Variable(input_tensor.cuda())
         with torch.no_grad():
-            aux = model(input_var).data.cpu().numpy()
+            aux = model(input_var, penultimate=penultimate).data.cpu().numpy()
 
         if i == 0:
             features = np.zeros((N, aux.shape[1])).astype('float32')
@@ -410,7 +411,8 @@ def compute_features(dataloader, model, N):
 def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
-    features = compute_features(test_dataloader, model, num_imgs)
+    features = compute_features(test_dataloader, model, num_imgs,
+                                penultimate=True)
     _ = deepcluster.cluster(features, verbose=args.verbose)
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,

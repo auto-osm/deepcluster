@@ -51,11 +51,16 @@ class DeepClusterNet6c(VGGNet):
         if sobel:
             self.features.sobel = make_sobel()
 
-    def forward(self, x):
+    def forward(self, x, penultimate=False):
         x = self.features(x)
 
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
+
+        # used by assess code
+        if penultimate:
+            return x
+
         if self.top_layer:
             x = self.top_layer(x)
         return x

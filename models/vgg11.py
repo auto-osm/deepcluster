@@ -44,13 +44,18 @@ class VGG(nn.Module):
         else:
             self.sobel = None
 
-    def forward(self, x):
+    def forward(self, x, penultimate=False):
         if self.sobel:
             x = self.sobel(x)
         x = self.features(x)
 
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
+
+        # used by assess code
+        if penultimate:
+            return x
+
         if self.top_layer:
             x = self.top_layer(x)
         return x
