@@ -76,7 +76,7 @@ parser.add_argument('--reassign', type=float, default=1.,
                     reassignments of clusters (default: 1)""")
 parser.add_argument('--workers', default=0, type=int,
                     help='number of data loading workers (default: 0)')
-parser.add_argument('--total_epochs', type=int, default=200,
+parser.add_argument('--total_epochs', type=int, default=3200,
                     help='number of total epochs to run (default: 200)')
 
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum (default: 0.9)')
