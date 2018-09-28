@@ -42,6 +42,8 @@ parser.add_argument('--gt_k', type=int, required=True)
 parser.add_argument('--resize_sz', type=int, default=None)
 parser.add_argument('--crop_sz', type=int, required=True)
 
+parser.add_argument('--dist_granularity', type=int, default=1000)
+
 parser.add_argument('--normalize', action='store_true', default=False)
 
 parser.add_argument("--dataset", type=str, required=True)
@@ -86,7 +88,6 @@ parser.add_argument('--momentum', default=0.9, type=float, help='momentum (defau
 
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
-
 
 
 # means, std
@@ -239,7 +240,7 @@ def main():
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
         acc = assess_acc(test_dataset, test_dataloader, model,
-                         len(test_dataset))
+                         len(test_dataset), ext="pre")
         print("got %f" % acc)
         sys.stdout.flush()
 
@@ -298,7 +299,13 @@ def main():
                      per_batch=(epoch == next_epoch))
 
         # assess ---------------------------------------------------------------
-        acc = assess_acc(test_dataset, test_dataloader, model, len(test_dataset))
+        if epoch % args.dist_granularity == 0:
+            dist_ext = str(epoch)
+        else:
+            dist_ext = ""
+
+        acc = assess_acc(test_dataset, test_dataloader, model,
+                         len(test_dataset), ext=dist_ext)
 
         print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
               "time %s"
@@ -427,7 +434,7 @@ def compute_features(dataloader, model, N, penultimate=False):
 
     return features
 
-def assess_acc(test_dataset, test_dataloader, model, num_imgs):
+def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs,
@@ -444,7 +451,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
     # assuming the order corresponds to indices, for centroids
-    analyse(predicted_labels, args.gt_k, ext="raw",
+    analyse(predicted_labels, args.gt_k, ext=ext,
             names=get_sizes(deepcluster.centroids))
 
     assert(true_labels.min() == 0)
@@ -462,7 +469,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     for pred_i, target_i in match:
         reordered_preds[predicted_labels == pred_i] = target_i
 
-    analyse(reordered_preds, args.gt_k, ext="reordered")
+    #analyse(reordered_preds, args.gt_k, ext="reordered") shuld be same
 
     return compute_acc(reordered_preds, true_labels, args.gt_k)
 
