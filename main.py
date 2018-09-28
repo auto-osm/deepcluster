@@ -437,6 +437,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     print(deepcluster.centroids.__class__)
     print(deepcluster.centroids)
+    print(deepcluster.centroids.shape)
     exit(0)
 
     relabelled_test_dataset = clustering.cluster_assign(args,
