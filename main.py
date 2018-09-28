@@ -435,10 +435,6 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
                                 penultimate=True)
     _ = deepcluster.cluster(features, verbose=args.verbose)
 
-    np.set_printoptions(threshold='nan')
-    print(deepcluster.centroids)
-    exit(0)
-
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
                                              test_dataset)
@@ -448,7 +444,8 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
-    analyse(predicted_labels, args.gt_k, ext="raw", names=None) #TODO
+    analyse(predicted_labels, args.gt_k, ext="raw",
+            names=get_sizes(deepcluster.centroids))
 
     assert(true_labels.min() == 0)
     assert(true_labels.max() == args.gt_k - 1)
@@ -472,7 +469,6 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 def analyse(predictions, gt_k, ext="", names=None):
     # bar chart showing assignment per cluster centre (named)
 
-    names = range(gt_k)
     predictions = np.array(predictions)
     sums = np.array([sum(predictions == c) for c in names])
     
@@ -480,16 +476,28 @@ def analyse(predictions, gt_k, ext="", names=None):
     sums = sums[sorted_indices]
 
     if names is not None:
+        assert(len(names) == len(sums))
         names = [str(c) for c in names[sorted_indices]]
 
     assert(len(predictions) == sum(sums))
     fig, ax = plt.subplots(1, figsize=(20, 20))
 
-    ax.plot(sums) # TODO names if not none - barchart
+    ax.bar(range(gt_k), sums, align='center', alpha=0.5)
+    ax.xticks(range(gt_k), names)
+    ax.ylabel("Counts")
+    ax.xlabel("Sum of abs of centroid")
 
     ax.set_title("Cluster distribution (%s)" % ext)
     fig.canvas.draw_idle()
     fig.savefig(os.path.join(args.out_dir, "distribution_%s.png" % ext))
+
+def get_sizes(centroids):
+    # k, d matrix
+    print("centroids shape")
+    print centroids.shape
+
+    k, _ = centroids.shape
+    return [sum(np.abs(centroids[i, :])) for i in xrange(k)]
 
 if __name__ == '__main__':
     main()
