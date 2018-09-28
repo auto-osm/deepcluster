@@ -132,6 +132,9 @@ def main():
 
         if not hasattr(args, 'resize_sz'):
             args.resize_sz = None
+
+        if not hasattr(args, 'resume_mode'):
+            args.resume_mode = old_args.resume_mode
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
