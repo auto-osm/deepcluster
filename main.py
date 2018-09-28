@@ -135,6 +135,9 @@ def main():
 
         if not hasattr(args, 'resume_mode'):
             args.resume_mode = old_args.resume_mode
+
+        if not hasattr(args, 'just_analyse'):
+            args.just_analyse = old_args.just_analyse
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
