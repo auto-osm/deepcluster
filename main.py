@@ -472,7 +472,7 @@ def analyse(predictions, gt_k, ext="", names=None):
     predictions = np.array(predictions)
     sums = np.array([sum(predictions == c) for c in names])
     
-    sorted_indices = np.argsort(sums)
+    sorted_indices = np.argsort(sums).astype("int")
     sums = sums[sorted_indices]
 
     if names is not None:
@@ -487,7 +487,7 @@ def analyse(predictions, gt_k, ext="", names=None):
     ax.bar(range(gt_k), sums, align='center', alpha=0.5)
     ax.xticks(range(gt_k), names)
     ax.ylabel("Counts")
-    ax.xlabel("Sum of abs of centroid")
+    ax.xlabel("Average abs value per centroid")
 
     ax.set_title("Cluster distribution (%s)" % ext)
     fig.canvas.draw_idle()
@@ -497,8 +497,8 @@ def get_sizes(centroids):
     # k, d matrix
     # e.g. 10, 3200 (stl10 with net5g)
 
-    k, _ = centroids.shape
-    return [sum(np.abs(centroids[i, :])) for i in xrange(k)]
+    k, d = centroids.shape
+    return [(sum(np.abs(centroids[i, :])) / float(d)) for i in xrange(k)]
 
 if __name__ == '__main__':
     main()
