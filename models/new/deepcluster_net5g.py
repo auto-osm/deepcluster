@@ -80,6 +80,9 @@ class DeepClusterNet5g(ResNet):
     def forward(self, x, penultimate=False):
         x = self.features(x)
 
+        print("net5g forward size")
+        print x.shape
+
         #x = x.view(x.size(0), -1)
         #x = self.classifier(x)
 

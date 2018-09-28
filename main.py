@@ -418,6 +418,8 @@ def compute_features(dataloader, model, N, penultimate=False):
 
         if i == 0:
             features = np.zeros((N, aux.shape[1])).astype('float32')
+            print("returned shape in compute_features")
+            print(aux.shape)
 
         if i < len(dataloader) - 1:
             features[i * args.batch_sz: (i + 1) * args.batch_sz] = aux.astype(
