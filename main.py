@@ -473,13 +473,12 @@ def analyse(predictions, gt_k, ext="", names=None):
     sums = np.array([sum(predictions == c) for c in names])
     
     sorted_indices = np.argsort(sums).astype("int")
-    sums = sums[sorted_indices]
+    sums = list(sums[sorted_indices])
 
     if names is not None:
-        print(names)
-
+        names = list(names[sorted_indices])
         assert(len(names) == len(sums))
-        names = [str(c) for c in names[sorted_indices]]
+        names = [str(c) for c in names]
 
     assert(len(predictions) == sum(sums))
     fig, ax = plt.subplots(1, figsize=(20, 20))
@@ -498,7 +497,8 @@ def get_sizes(centroids):
     # e.g. 10, 3200 (stl10 with net5g)
 
     k, d = centroids.shape
-    return [(sum(np.abs(centroids[i, :])) / float(d)) for i in xrange(k)]
+
+    return centroids.sum(axis=1) / float(d)
 
 if __name__ == '__main__':
     main()
