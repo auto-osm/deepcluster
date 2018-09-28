@@ -488,8 +488,8 @@ def analyse(predictions, gt_k, ext="", names=None):
     ax.set_xticks(range(gt_k))
     ax.set_xticklabels(names, rotation=45)
 
-    ax.ylabel("Counts")
-    ax.xlabel("Average abs value per centroid")
+    ax.set_ylabel("Counts")
+    ax.set_xlabel("Average abs value per centroid")
 
     ax.set_title("Cluster distribution (%s)" % ext)
     fig.canvas.draw_idle()
