@@ -444,6 +444,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
+    # assuming the order corresponds to indices, for centroids
     analyse(predicted_labels, args.gt_k, ext="raw",
             names=get_sizes(deepcluster.centroids))
 
@@ -484,7 +485,9 @@ def analyse(predictions, gt_k, ext="", names=None):
     fig, ax = plt.subplots(1, figsize=(20, 20))
 
     ax.bar(range(gt_k), sums, align='center', alpha=0.5)
-    ax.xticks(range(gt_k), names)
+    ax.set_xticks(range(gt_k))
+    ax.set_xticklabels(names, rotation=45)
+
     ax.ylabel("Counts")
     ax.xlabel("Average abs value per centroid")
 
