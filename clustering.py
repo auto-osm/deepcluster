@@ -157,12 +157,6 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     """
     n_data, d = x.shape
 
-    print("shape in run_kmeans")
-    print(x.shape)
-
-    print("nmb_clusters")
-    print(nmb_clusters)
-
     # faiss implementation of k-means
     clus = faiss.Clustering(d, nmb_clusters)
     clus.niter = 20
@@ -178,11 +172,7 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     _, I = index.search(x, 1)
     losses = faiss.vector_to_array(clus.obj)
 
-    print("clustering object")
-    print(clus.k)
-    print(clus.d)
-
-    centroids = faiss.vector_to_array(clus.centroids)
+    centroids = faiss.vector_to_array(clus.centroids).reshape(clus.k, clus.d)
     #if verbose: print('k-means loss evolution: {0}'.format(losses))
 
     return [int(n[0]) for n in I], losses[-1], centroids
