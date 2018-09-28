@@ -197,12 +197,12 @@ class Kmeans:
         """
 
         # PCA-reducing, whitening and L2-normalization
-        xb = preprocess_features(data)
+        # xb = preprocess_features(data) TODO
 
         # cluster the data
         # I: data index -> k means cluster index
         # images_lists: k means cluster index -> data index
-        I, loss, centroids = run_kmeans(xb, self.k, verbose)
+        I, loss, centroids = run_kmeans(data, self.k, verbose) # TODO
 
         self.centroids = centroids
 

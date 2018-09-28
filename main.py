@@ -236,7 +236,6 @@ def main():
     # clustering algorithm to use
     deepcluster = clustering.__dict__[args.clustering](args.k)
 
-
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
         acc = assess_acc(test_dataset, test_dataloader, model,
