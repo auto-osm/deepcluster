@@ -470,8 +470,8 @@ def analyse(predictions, gt_k, ext="", names=None):
     # bar chart showing assignment per cluster centre (named)
 
     predictions = np.array(predictions)
-    sums = np.array([sum(predictions == c) for c in names])
-    
+    sums = np.array([sum(predictions == c) for c in xrange(gt_k)])
+
     sorted_indices = np.argsort(sums).astype("int")
     sums = list(sums[sorted_indices])
 
