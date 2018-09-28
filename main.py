@@ -476,17 +476,18 @@ def analyse(predictions, gt_k, ext="", names=None):
     sorted_indices = np.argsort(sums).astype("int")
     sums = list(sums[sorted_indices])
 
+    assert(len(predictions) == sum(sums))
+    fig, ax = plt.subplots(1, figsize=(20, 20))
+
+    ax.bar(range(gt_k), sums, align='center', alpha=0.5)
+
     if names is not None:
         names = list(names[sorted_indices])
         assert(len(names) == len(sums))
         names = [str(c) for c in names]
 
-    assert(len(predictions) == sum(sums))
-    fig, ax = plt.subplots(1, figsize=(20, 20))
-
-    ax.bar(range(gt_k), sums, align='center', alpha=0.5)
-    ax.set_xticks(range(gt_k))
-    ax.set_xticklabels(names, rotation=45)
+        ax.set_xticks(range(gt_k))
+        ax.set_xticklabels(names, rotation=45)
 
     ax.set_ylabel("Counts")
     ax.set_xlabel("Average abs value per centroid")
