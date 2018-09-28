@@ -54,9 +54,12 @@ parser.add_argument("--out_root", type=str,
                     default="/scratch/shared/slow/xuji/deepcluster")
 
 parser.add_argument('--resume', action='store_true', default=False)
+parser.add_argument('--resume_mode', type=str, choices=['latest', 'best'],
+                    default="latest")
 parser.add_argument('--checkpoint_granularity', type=int, default=1)
 
 parser.add_argument('--find_data_stats', action='store_true', default=False)
+parser.add_argument('--just_analyse', action='store_true', default=False)
 
 # ----
 
@@ -83,6 +86,8 @@ parser.add_argument('--momentum', default=0.9, type=float, help='momentum (defau
 
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
+
+
 
 # means, std
 _DATASET_NORM = {
@@ -137,6 +142,8 @@ def main():
     if not args.find_data_stats:
         print("args:")
         print(config_to_str(args))
+
+    sys.stdout.flush()
 
     # fix random seeds
     torch.manual_seed(args.seed)
@@ -209,7 +216,8 @@ def main():
 
     if args.resume:
         # remove top_layer parameters from checkpoint
-        checkpoint = torch.load(os.path.join(old_args.out_dir, "latest.pytorch"))
+        checkpoint = torch.load(os.path.join(old_args.out_dir, "%s.pytorch" %
+                                             args.resume_mode))
         for key in checkpoint['state_dict']:
             if 'top_layer' in key:
                 del checkpoint['state_dict'][key]
@@ -222,13 +230,18 @@ def main():
     # clustering algorithm to use
     deepcluster = clustering.__dict__[args.clustering](args.k)
 
-    if not args.resume:
-        print("Doing pre-training assessment")
+
+    if (not args.resume) or args.just_analyse:
+        print("Doing some assessment")
         acc = assess_acc(test_dataset, test_dataloader, model,
                          len(test_dataset))
-        args.epoch_acc.append(acc)
         print("got %f" % acc)
         sys.stdout.flush()
+
+        if args.just_analyse:
+            exit(0)
+
+        args.epoch_acc.append(acc)
 
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
@@ -415,6 +428,11 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     features = compute_features(test_dataloader, model, num_imgs,
                                 penultimate=True)
     _ = deepcluster.cluster(features, verbose=args.verbose)
+
+    print(deepcluster.centroids.__class__)
+    print(deepcluster.centroids)
+    exit(0)
+
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
                                              test_dataset)
@@ -424,6 +442,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
+    analyse(predicted_labels, args.gt_k, ext="raw", names=None) #TODO
 
     assert(true_labels.min() == 0)
     assert(true_labels.max() == args.gt_k - 1)
@@ -440,7 +459,31 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     for pred_i, target_i in match:
         reordered_preds[predicted_labels == pred_i] = target_i
 
+    analyse(reordered_preds, args.gt_k, ext="reordered")
+
     return compute_acc(reordered_preds, true_labels, args.gt_k)
+
+def analyse(predictions, gt_k, ext="", names=None):
+    # bar chart showing assignment per cluster centre (named)
+
+    names = range(gt_k)
+    predictions = np.array(predictions)
+    sums = np.array([sum(predictions == c) for c in names])
+    
+    sorted_indices = np.argsort(sums)
+    sums = sums[sorted_indices]
+
+    if names is not None:
+        names = [str(c) for c in names[sorted_indices]]
+
+    assert(len(predictions) == sum(sums))
+    fig, ax = plt.subplots(1, figsize=(20, 20))
+
+    ax.plot(sums) # TODO names if not none - barchart
+
+    ax.set_title("Cluster distribution (%s)" % ext)
+    fig.canvas.draw_idle()
+    fig.savefig(os.path.join(args.out_dir, "distribution_%s.png" % ext))
 
 if __name__ == '__main__':
     main()

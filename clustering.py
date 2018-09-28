@@ -173,7 +173,7 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     losses = faiss.vector_to_array(clus.obj)
     #if verbose: print('k-means loss evolution: {0}'.format(losses))
 
-    return [int(n[0]) for n in I], losses[-1]
+    return [int(n[0]) for n in I], losses[-1], clus.centroids
 
 
 def arrange_clustering(images_lists):
@@ -202,7 +202,11 @@ class Kmeans:
         # cluster the data
         # I: data index -> k means cluster index
         # images_lists: k means cluster index -> data index
-        I, loss = run_kmeans(xb, self.k, verbose)
+        I, loss, centroids = run_kmeans(xb, self.k, verbose)
+
+        self.centroids = centroids
+
+        # maps cluster index to
         self.images_lists = [[] for i in range(self.k)]
         for i in range(len(data)):
             self.images_lists[I[i]].append(i)
