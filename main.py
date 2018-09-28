@@ -476,6 +476,8 @@ def analyse(predictions, gt_k, ext="", names=None):
     sums = sums[sorted_indices]
 
     if names is not None:
+        print(names)
+
         assert(len(names) == len(sums))
         names = [str(c) for c in names[sorted_indices]]
 
@@ -493,8 +495,7 @@ def analyse(predictions, gt_k, ext="", names=None):
 
 def get_sizes(centroids):
     # k, d matrix
-    print("centroids shape")
-    print centroids.shape
+    # e.g. 10, 3200 (stl10 with net5g)
 
     k, _ = centroids.shape
     return [sum(np.abs(centroids[i, :])) for i in xrange(k)]
