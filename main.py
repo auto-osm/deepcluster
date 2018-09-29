@@ -404,7 +404,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
         output = model(input_var)
 
-        print("output_sz %s" % output.shape)
+        print("output_sz %s" % list(output.shape))
 
         loss = crit(output, target_var)
 
