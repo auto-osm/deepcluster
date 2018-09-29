@@ -212,9 +212,8 @@ def main():
         print('Architecture: {}'.format(args.arch))
     model = models.__dict__[args.arch](sobel=args.sobel, out=args.gt_k,
                                        input_sp_sz=args.crop_sz, input_ch=args.input_ch)
-    fd = int(model.top_layer.weight.size()[1])
-    model.top_layer = None
-    model.features = torch.nn.DataParallel(model.features)
+    fd = model.dlen
+    #model.features = torch.nn.DataParallel(model.features)
     model.cuda()
     cudnn.benchmark = True
 
@@ -230,9 +229,12 @@ def main():
         # remove top_layer parameters from checkpoint
         checkpoint = torch.load(os.path.join(old_args.out_dir, "%s.pytorch" %
                                              args.resume_mode))
+        """
         for key in checkpoint['state_dict']:
             if 'top_layer' in key:
                 del checkpoint['state_dict'][key]
+        """
+
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
 
