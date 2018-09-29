@@ -405,6 +405,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         output = model(input_var)
 
         print("output_sz %s" % list(output.shape))
+        print(target_var.max())
+        print(target_var.min())
 
         loss = crit(output, target_var)
 
