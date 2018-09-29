@@ -53,11 +53,11 @@ class DeepClusterNet6c(VGGNet):
         self.last_conv = 512
         self.dlen = 1000
 
-        self.feature_head = nn.Sequential([
+        self.feature_head = nn.Sequential(
             nn.Linear(self.last_conv * self.feats_sp_sz * self.feats_sp_sz, self.dlen),
             nn.BatchNorm1d(self.dlen),
             nn.ReLU(True)
-        ])
+        )
 
         self.top_layer = nn.Linear(self.dlen, out)
 
