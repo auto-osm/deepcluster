@@ -92,4 +92,6 @@ class DeepClusterNet5g(ResNet):
         return x
 
 def deepcluster_net5g(sobel=False, out=None, input_sp_sz=None, input_ch=None):
+    assert(False)
+
     return DeepClusterNet5g(sobel, out, input_sp_sz, input_ch)
