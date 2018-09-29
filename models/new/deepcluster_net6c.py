@@ -53,8 +53,8 @@ class DeepClusterNet6c(VGGNet):
         )
         """
 
-        self.top_layer = nn.Linear(num_features * self.features.feats_sp_sz *
-                                   self.features.feats_sp_sz, out)
+        self.top_layer = nn.Linear(num_features * self.feats_sp_sz * self.feats_sp_sz,
+                                   out)
 
         self._initialize_weights()
 
