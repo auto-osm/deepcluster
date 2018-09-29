@@ -1,7 +1,7 @@
 import torch.nn as nn
 from vgg import VGGTrunk, VGGNet
 from make_sobel import make_sobel
-# for 24x24
+# for 24x24 or 64x64
 
 __all__ = [ 'deepcluster_net6c']
 
@@ -28,17 +28,23 @@ class DeepClusterNet6cTrunk(VGGTrunk):
         return x
 
 class DeepClusterNet6c(VGGNet):
-    cfg = [(64, 1), ('M', None), (128, 1), ('M', None),
-           (256, 1), ('M', None), (512, 1)]
+
 
     def __init__(self, sobel=False, out=None, input_sp_sz=None, input_ch=None):
         super(DeepClusterNet6c, self).__init__()
 
+        if input_sp_sz == 64:
+            DeepClusterNet6c.cfg = [(64, 1), ('M', None), (128, 1), ('M', None),
+                   (256, 1), ('M', None), (512, 1), ('M', None)]
+            self.feats_sp_sz = 4
+        elif input_sp_sz == 24:
+            DeepClusterNet6c.cfg = [(64, 1), ('M', None), (128, 1), ('M', None),
+                   (256, 1), ('M', None), (512, 1)]
+            self.feats_sp_sz = 3
+
         self.features = DeepClusterNet6cTrunk(sobel, input_ch)
 
         num_features = DeepClusterNet6c.cfg[-1][0]
-
-        assert(input_sp_sz == 24)
 
         """
         self.classifier = nn.Sequential(
@@ -47,7 +53,8 @@ class DeepClusterNet6c(VGGNet):
         )
         """
 
-        self.top_layer = nn.Linear(num_features * 3 * 3, out)
+        self.top_layer = nn.Linear(num_features * self.features.feats_sp_sz *
+                                   self.features.feats_sp_sz, out)
 
         self._initialize_weights()
 
