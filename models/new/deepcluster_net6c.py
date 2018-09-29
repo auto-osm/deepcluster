@@ -29,7 +29,6 @@ class DeepClusterNet6cTrunk(VGGTrunk):
 
 class DeepClusterNet6c(VGGNet):
 
-
     def __init__(self, sobel=False, out=None, input_sp_sz=None, input_ch=None):
         super(DeepClusterNet6c, self).__init__()
 
@@ -51,8 +50,16 @@ class DeepClusterNet6c(VGGNet):
         )
         """
 
-        self.top_layer = nn.Linear(512 * self.feats_sp_sz * self.feats_sp_sz,
-                                   out)
+        self.last_conv = 512
+        self.dlen = 1000
+
+        self.feature_head = nn.Sequential([
+            nn.Linear(self.last_conv * self.feats_sp_sz * self.feats_sp_sz, self.dlen),
+            nn.BatchNorm1d(self.dlen),
+            nn.ReLU(True)
+        ])
+
+        self.top_layer = nn.Linear(self.dlen, out)
 
         self._initialize_weights()
 
@@ -61,17 +68,22 @@ class DeepClusterNet6c(VGGNet):
 
     def forward(self, x, penultimate=False):
         x = self.features(x)
+        x = self.feature_head(x)
 
         #x = x.view(x.size(0), -1)
         #x = self.classifier(x)
 
-        # used by assess code
+        # used by assess code and features
         if penultimate:
             return x
 
-        if self.top_layer:
-            x = self.top_layer(x)
+        x = self.top_layer(x)
         return x
+
+    def reset_top_layer(self):
+        self.top_layer.weight.data.normal_(0, 0.01)
+        self.top_layer.bias.data.zero_()
+        self.top_layer.cuda()
 
 def deepcluster_net6c(sobel=False, out=None, input_sp_sz=None, input_ch=None):
     return DeepClusterNet6c(sobel, out, input_sp_sz, input_ch)

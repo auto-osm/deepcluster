@@ -257,7 +257,6 @@ def main():
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
         # remove head
-        model.top_layer = None
         #model.classifier = nn.Sequential(*list(model.classifier.children())[
         # :-1])
 
@@ -296,10 +295,8 @@ def main():
         """
         if epoch == next_epoch:
             print("fd length: %d" % fd)
-        model.top_layer = nn.Linear(fd, args.k) # clearer
-        model.top_layer.weight.data.normal_(0, 0.01)
-        model.top_layer.bias.data.zero_()
-        model.top_layer.cuda()
+
+        model.reset_top_layer()
 
         # train network with clusters as pseudo-labels
         loss = train(train_dataloader, model, criterion, optimizer, epoch,
@@ -384,12 +381,14 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     # switch to train mode
     model.train()
 
+    """
     # create an optimizer for the last fc layer
     optimizer_tl = torch.optim.SGD(
         model.top_layer.parameters(),
         lr=args.lr,
         weight_decay=10**args.wd,
     )
+    """
 
     if per_batch:
         print("num batches: %d" % len(loader))
@@ -409,10 +408,10 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
         # compute gradient and do SGD step
         opt.zero_grad()
-        optimizer_tl.zero_grad()
+        #optimizer_tl.zero_grad()
         loss.backward()
         opt.step()
-        optimizer_tl.step()
+        #optimizer_tl.step()
 
         if ((i % 100) == 0) or per_batch:
             print("... epoch %d batch %d train loss %f time %s" %
@@ -421,13 +420,14 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     return losses.avg
 
-def compute_features(dataloader, model, N, penultimate=False):
+def compute_features(dataloader, model, N):
     model.eval()
     # discard the label information in the dataloader
     for i, (input_tensor, _) in enumerate(dataloader):
         input_var = torch.autograd.Variable(input_tensor.cuda())
         with torch.no_grad():
-            aux = model(input_var, penultimate=penultimate).data.cpu().numpy()
+            # penultimate = features
+            aux = model(input_var, penultimate=True).data.cpu().numpy()
 
         if i == 0:
             features = np.zeros((N, aux.shape[1])).astype('float32')
@@ -444,8 +444,7 @@ def compute_features(dataloader, model, N, penultimate=False):
 def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
-    features = compute_features(test_dataloader, model, num_imgs,
-                                penultimate=True)
+    features = compute_features(test_dataloader, model, num_imgs)
     _ = deepcluster.cluster(features, proc_feat=args.proc_feat,
                             verbose=args.verbose)
 
