@@ -284,7 +284,7 @@ def main():
             train_dataset,
             batch_size=args.batch_sz,
             num_workers=args.workers,
-            sampler=sampler,
+            #sampler=sampler,
             pin_memory=True,
         )
 
