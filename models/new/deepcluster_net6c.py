@@ -44,8 +44,6 @@ class DeepClusterNet6c(VGGNet):
 
         self.features = DeepClusterNet6cTrunk(sobel, input_ch)
 
-        num_features = DeepClusterNet6c.cfg[-1][0]
-
         """
         self.classifier = nn.Sequential(
             nn.Linear(num_features * 3 * 3, 4096),
@@ -53,7 +51,7 @@ class DeepClusterNet6c(VGGNet):
         )
         """
 
-        self.top_layer = nn.Linear(num_features * self.feats_sp_sz * self.feats_sp_sz,
+        self.top_layer = nn.Linear(512 * self.feats_sp_sz * self.feats_sp_sz,
                                    out)
 
         self._initialize_weights()
