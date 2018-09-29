@@ -162,7 +162,11 @@ def main():
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
 
+    # losses and acc
     fig, axarr = plt.subplots(3, sharex=False, figsize=(20, 20))
+
+    # distr
+    distr_fig, distr_ax = plt.subplots(1, figsize=(20, 20))
 
     # Data ---------------------------------------------------------------------
 
@@ -247,7 +251,8 @@ def main():
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
         acc = assess_acc(test_dataset, test_dataloader, model,
-                         len(test_dataset), ext="pre")
+                         len(test_dataset), fig_ax=(distr_fig, distr_ax),
+                         ext="pre")
         print("got %f" % acc)
         sys.stdout.flush()
 
@@ -311,7 +316,8 @@ def main():
             dist_ext = ""
 
         acc = assess_acc(test_dataset, test_dataloader, model,
-                         len(test_dataset), ext=dist_ext)
+                         len(test_dataset), fig_ax=(distr_fig, distr_ax),
+                         ext=dist_ext)
 
         print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
               "time %s"
@@ -444,7 +450,7 @@ def compute_features(dataloader, model, N):
 
     return features
 
-def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
+def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
@@ -461,7 +467,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
     # assuming the order corresponds to indices, for centroids
-    analyse(predicted_labels, args.gt_k, ext=ext,
+    analyse(predicted_labels, args.gt_k, fig_ax=fig_ax, ext=ext,
             names=get_sizes(deepcluster.centroids))
 
     assert(true_labels.min() == 0)
@@ -483,7 +489,7 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
 
     return compute_acc(reordered_preds, true_labels, args.gt_k)
 
-def analyse(predictions, gt_k, ext="", names=None):
+def analyse(predictions, gt_k, fig_ax, ext="", names=None):
     # bar chart showing assignment per cluster centre (named)
 
     predictions = np.array(predictions)
@@ -493,8 +499,9 @@ def analyse(predictions, gt_k, ext="", names=None):
     sums = list(sums[sorted_indices])
 
     assert(len(predictions) == sum(sums))
-    fig, ax = plt.subplots(1, figsize=(20, 20))
+    fig, ax = fig_ax
 
+    ax.clear()
     ax.bar(range(gt_k), sums, align='center', alpha=0.5)
 
     if names is not None:
