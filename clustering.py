@@ -190,14 +190,15 @@ class Kmeans:
     def __init__(self, k):
         self.k = k
 
-    def cluster(self, data, verbose=False):
+    def cluster(self, data, proc_feat=False, verbose=False):
         """Performs k-means clustering.
             Args:
                 x_data (np.array N * dim): data to cluster
         """
 
         # PCA-reducing, whitening and L2-normalization
-        # xb = preprocess_features(data) TODO
+        if proc_feat:
+            data = preprocess_features(data)
 
         # cluster the data
         # I: data index -> k means cluster index

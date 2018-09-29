@@ -63,6 +63,8 @@ parser.add_argument('--checkpoint_granularity', type=int, default=1)
 parser.add_argument('--find_data_stats', action='store_true', default=False)
 parser.add_argument('--just_analyse', action='store_true', default=False)
 
+parser.add_argument('--proc_feat', action='store_true', default=False)
+
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
@@ -139,6 +141,9 @@ def main():
 
         if not hasattr(args, 'just_analyse'):
             args.just_analyse = old_args.just_analyse
+
+        if not hasattr(args, 'proc_feat'):
+            args.proc_feat = proc_feat
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
@@ -260,7 +265,9 @@ def main():
         features = compute_features(dataloader, model, len(dataset))
 
         # cluster the features
-        clustering_loss = deepcluster.cluster(features, verbose=args.verbose)
+        clustering_loss = deepcluster.cluster(features,
+                                              proc_feat=args.proc_feat,
+                                              verbose=args.verbose)
 
         # assign pseudo-labels to make new dataset
         train_dataset = clustering.cluster_assign(args,
@@ -439,7 +446,8 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, ext=""):
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs,
                                 penultimate=True)
-    _ = deepcluster.cluster(features, verbose=args.verbose)
+    _ = deepcluster.cluster(features, proc_feat=args.proc_feat,
+                            verbose=args.verbose)
 
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
