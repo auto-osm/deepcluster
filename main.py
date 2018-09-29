@@ -403,6 +403,9 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         target_var = torch.autograd.Variable(target)
 
         output = model(input_var)
+
+        print("output_sz %s" % output.shape)
+
         loss = crit(output, target_var)
 
         # record loss
