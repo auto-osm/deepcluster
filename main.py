@@ -143,7 +143,7 @@ def main():
             args.just_analyse = old_args.just_analyse
 
         if not hasattr(args, 'proc_feat'):
-            args.proc_feat = proc_feat
+            args.proc_feat = old_args.proc_feat
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
