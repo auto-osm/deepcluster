@@ -210,7 +210,7 @@ def main():
     # CNN
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
-    model = models.__dict__[args.arch](sobel=args.sobel, out=args.gt_k,
+    model = models.__dict__[args.arch](sobel=args.sobel, out=args.k,
                                        input_sp_sz=args.crop_sz, input_ch=args.input_ch)
     fd = model.dlen
     #model.features = torch.nn.DataParallel(model.features)
