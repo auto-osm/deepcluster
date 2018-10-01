@@ -266,7 +266,7 @@ def main():
 
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
-        # remove relu on classifier (getting features)
+        # remove relu (getting features)
         model.remove_feature_head_relu()
 
         # get the features for the whole dataset
@@ -295,11 +295,6 @@ def main():
             pin_memory=True,
         )
 
-        """
-        mlp = list(model.classifier.children())
-        mlp.append(nn.ReLU(inplace=True).cuda())
-        model.classifier = nn.Sequential(*mlp)
-        """
         if epoch == next_epoch:
             print("fd length: %d" % fd)
 

@@ -43,13 +43,6 @@ class DeepClusterNet6c(VGGNet):
 
         self.features = DeepClusterNet6cTrunk(sobel, input_ch)
 
-        """
-        self.classifier = nn.Sequential(
-            nn.Linear(num_features * 3 * 3, 4096),
-            nn.ReLU(True)
-        )
-        """
-
         self.last_conv = 512
         self.dlen = 1000
 
@@ -71,9 +64,6 @@ class DeepClusterNet6c(VGGNet):
         x = self.features(x)
         x = self.feature_head(x)
 
-        #x = x.view(x.size(0), -1)
-        #x = self.classifier(x)
-
         # used by assess code and features
         if penultimate:
             return x
@@ -88,15 +78,15 @@ class DeepClusterNet6c(VGGNet):
 
     def remove_feature_head_relu(self):
         # called each epoch, pre-features
-        self.classifier = nn.Sequential(
-            *(list(self.classifier.children())[:-1]))
+        self.feature_head = nn.Sequential(
+            *(list(self.feature_head.children())[:-1]))
 
     def add_feature_head_relu(self):
         # called each epoch, post-features
-        mlp = list(self.classifier.children())
+        mlp = list(self.feature_head.children())
         assert(not ("ReLU" in str(mlp[-1])))
         mlp.append(nn.ReLU(inplace=True).cuda())
-        self.classifier = nn.Sequential(*mlp)
+        self.feature_head = nn.Sequential(*mlp)
 
     def reset_top_layer(self):
         # called each epoch, post-features
