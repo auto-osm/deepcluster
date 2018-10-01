@@ -88,7 +88,8 @@ class DeepClusterNet6c(VGGNet):
 
     def remove_feature_head_relu(self):
         # called each epoch, pre-features
-        self.classifier = nn.Sequential(*list(self.classifier.children())[:-1])
+        self.classifier = nn.Sequential(
+            *(list(self.classifier.children())[:-1]))
 
     def add_feature_head_relu(self):
         # called each epoch, post-features
