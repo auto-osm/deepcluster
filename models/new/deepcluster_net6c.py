@@ -59,7 +59,8 @@ class DeepClusterNet6c(VGGNet):
             nn.ReLU(True)
         )
 
-        self.top_layer = nn.Linear(self.dlen, out)
+        self.out = out
+        self.top_layer = None
 
         self._initialize_weights()
 
@@ -80,10 +81,26 @@ class DeepClusterNet6c(VGGNet):
         x = self.top_layer(x)
         return x
 
+    def make_top_layer(self):
+        # callled once at start of script
+        self.top_layer = nn.Linear(self.dlen, self.out)
+        self.top_layer.cuda()
+
+    def remove_feature_head_relu(self):
+        # called each epoch, pre-features
+        self.classifier = nn.Sequential(*list(self.classifier.children())[:-1])
+
+    def add_feature_head_relu(self):
+        # called each epoch, post-features
+        mlp = list(self.classifier.children())
+        assert(not ("ReLU" in str(mlp[-1])))
+        mlp.append(nn.ReLU(inplace=True).cuda())
+        self.classifier = nn.Sequential(*mlp)
+
     def reset_top_layer(self):
+        # called each epoch, post-features
         self.top_layer.weight.data.normal_(0, 0.01)
         self.top_layer.bias.data.zero_()
-        #self.top_layer.cuda()
 
 def deepcluster_net6c(sobel=False, out=None, input_sp_sz=None, input_ch=None):
     return DeepClusterNet6c(sobel, out, input_sp_sz, input_ch)

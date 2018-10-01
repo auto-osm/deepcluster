@@ -222,6 +222,7 @@ def main():
     cudnn.benchmark = True
 
     # create optimizer
+    assert(model.top_layer is None)
     optimizer = torch.optim.SGD(
         filter(lambda x: x.requires_grad, model.parameters()),
         lr=args.lr,
@@ -233,14 +234,16 @@ def main():
         # remove top_layer parameters from checkpoint
         checkpoint = torch.load(os.path.join(old_args.out_dir, "%s.pytorch" %
                                              args.resume_mode))
-        """
+
         for key in checkpoint['state_dict']:
             if 'top_layer' in key:
                 del checkpoint['state_dict'][key]
-        """
 
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
+
+    # after optimiser loading done, add a top layer
+    model.make_top_layer()
 
     # define loss function
     criterion = nn.CrossEntropyLoss().cuda()
@@ -263,9 +266,8 @@ def main():
 
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
-        # remove head
-        #model.classifier = nn.Sequential(*list(model.classifier.children())[
-        # :-1])
+        # remove relu on classifier (getting features)
+        model.remove_feature_head_relu()
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
@@ -293,8 +295,6 @@ def main():
             pin_memory=True,
         )
 
-        # set last fully connected layer
-        # top layer is created from new in each epoch! O_O
         """
         mlp = list(model.classifier.children())
         mlp.append(nn.ReLU(inplace=True).cuda())
@@ -303,6 +303,8 @@ def main():
         if epoch == next_epoch:
             print("fd length: %d" % fd)
 
+        # prepare for training by reintroducing relu and resetting last layer
+        model.add_feature_head_relu()
         model.reset_top_layer()
 
         # train network with clusters as pseudo-labels
@@ -389,14 +391,13 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     # switch to train mode
     model.train()
 
-    """
-    # create an optimizer for the last fc layer
+    # only exists within this loop, not saved
+    assert(not(model.top_layer is None))
     optimizer_tl = torch.optim.SGD(
         model.top_layer.parameters(),
         lr=args.lr,
         weight_decay=10**args.wd,
     )
-    """
 
     if per_batch:
         print("num batches: %d" % len(loader))
@@ -417,10 +418,10 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
         # compute gradient and do SGD step
         opt.zero_grad()
-        #optimizer_tl.zero_grad()
+        optimizer_tl.zero_grad()
         loss.backward()
         opt.step()
-        #optimizer_tl.step()
+        optimizer_tl.step()
 
         if ((i % 100) == 0) or per_batch:
             print("... epoch %d batch %d train loss %f time %s" %
