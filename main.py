@@ -223,11 +223,11 @@ def main():
 
     # create optimizer
     assert(model.top_layer is None)
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.Adam(
         filter(lambda x: x.requires_grad, model.parameters()),
         lr=args.lr,
-        momentum=args.momentum,
-        weight_decay=10**args.wd,
+        #momentum=args.momentum,
+        #weight_decay=10**args.wd,
     )
 
     if args.resume:
@@ -377,7 +377,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
             loader (torch.utils.data.DataLoader): Data loader
             model (nn.Module): CNN
             crit (torch.nn): loss
-            opt (torch.optim.SGD): optimizer for every parameters with True
+            opt: optimizer for every parameters with True
                                    requires_grad in model except top layer
             epoch (int)
     """
@@ -388,10 +388,10 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     # only exists within this loop, not saved
     assert(not(model.top_layer is None))
-    optimizer_tl = torch.optim.SGD(
+    optimizer_tl = torch.optim.Adam(
         model.top_layer.parameters(),
         lr=args.lr,
-        weight_decay=10**args.wd,
+        #weight_decay=10**args.wd,
     )
 
     if per_batch:
@@ -411,7 +411,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         # record loss
         losses.update(float(loss.data), input_tensor.size(0))
 
-        # compute gradient and do SGD step
+        # compute gradient and do gradient step
         opt.zero_grad()
         optimizer_tl.zero_grad()
         loss.backward()
