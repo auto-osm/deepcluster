@@ -213,9 +213,9 @@ class Kmeans:
         # I: data index -> k means cluster index
         # images_lists: k means cluster index -> data index
         # OLD:
-        # I, loss, centroids = run_kmeans(data, self.k, verbose)
+        I, loss, centroids = run_kmeans(data, self.k, verbose)
 
-        I, loss, centroids = run_our_kmeans(data, self.k)
+        #I, loss, centroids = run_our_kmeans(data, self.k)
 
         self.centroids = centroids
 
