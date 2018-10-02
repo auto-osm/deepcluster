@@ -57,8 +57,8 @@ class ReassignedDataset(data.Dataset):
 
         # make images in original order of dataset so that it's lined up for
         # assess
-        images = [None for _ in xrange(len(image_indexes))]
-        for j, idx in enumerate(image_indexes):
+        images = [None for _ in xrange(len(shuffled_image_indexes))]
+        for j, idx in enumerate(shuffled_image_indexes):
             img = dataset[idx][0] # is this path or image? try other datasets
             pseudolabel = pseudolabels[j]
             #images.append((img, pseudolabel))
