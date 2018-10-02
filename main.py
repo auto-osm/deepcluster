@@ -452,12 +452,18 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     features = compute_features(test_dataloader, model, num_imgs)
     _ = deepcluster.cluster(features, proc_feat=args.proc_feat,
                             verbose=args.verbose)
+
+    print("images_list sizes of clusterer after cluster")
+    for i in xrange(len(deepcluster.images_lists)):
+        print("gt_k: %d (%d)" % (i, len(deepcluster.images_lists[i])))
+
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
                                              test_dataset)
 
     assert(num_imgs == len(test_dataset))
     assert(num_imgs == len(relabelled_test_dataset))
+
 
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])

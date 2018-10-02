@@ -36,8 +36,9 @@ def pil_loader(path):
 class ReassignedDataset(data.Dataset):
     """A dataset where the new images labels are given in argument.
     Args:
-        image_indexes (list): list of data indexes
-        pseudolabels (list): list of labels for each data
+        image_indexes (list): list of image indexes in the dataset
+        pseudolabels (list): list of labels for each image
+                             lines up with image_indexes
         dataset (list): list of tuples with paths to images
         transform (callable, optional): a function/transform that takes in
                                         an PIL image and returns a
@@ -49,12 +50,19 @@ class ReassignedDataset(data.Dataset):
         self.transform = transform
 
     def make_dataset(self, image_indexes, pseudolabels, dataset):
+
+        print("in reassigned dataset")
+        print("pseudolabels")
+        print(pseudolabels[:50])
+        # reindex the pseudolabels for no reason?
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
         for j, idx in enumerate(image_indexes):
             path = dataset[idx][0]
             pseudolabel = label_to_idx[pseudolabels[j]]
             images.append((path, pseudolabel))
+        print("images")
+        print(images[:50])
         return images
 
     def __getitem__(self, index):
