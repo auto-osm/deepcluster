@@ -42,8 +42,6 @@ parser.add_argument('--gt_k', type=int, required=True)
 parser.add_argument('--resize_sz', type=int, default=None)
 parser.add_argument('--crop_sz', type=int, required=True)
 
-parser.add_argument('--dist_granularity', type=int, default=1000)
-
 parser.add_argument('--normalize', action='store_true', default=False)
 
 parser.add_argument("--dataset", type=str, required=True)
