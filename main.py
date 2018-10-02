@@ -112,7 +112,7 @@ def main():
         # get old args
         old_args = args
 
-        reloaded_args_path = os.path.join(old_args.out_dir, "args.pickle")
+        reloaded_args_path = os.path.join(old_args.out_dir, "config.pickle")
         print("Loading restarting args from: %s" % reloaded_args_path)
         with open(reloaded_args_path, "rb") as args_f:
           args = pickle.load(args_f)
@@ -132,27 +132,19 @@ def main():
         args.epoch_loss = args.epoch_loss[:next_epoch]
         args.epoch_cluster_dist = args.epoch_cluster_dist[:next_epoch]
         args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
-
-        if not hasattr(args, 'resize_sz'):
-            args.resize_sz = None
-
-        if not hasattr(args, 'resume_mode'):
-            args.resume_mode = old_args.resume_mode
-
-        if not hasattr(args, 'just_analyse'):
-            args.just_analyse = old_args.just_analyse
-
-        if not hasattr(args, 'proc_feat'):
-            args.proc_feat = old_args.proc_feat
     else:
         args.epoch_acc = []
         args.epoch_cluster_dist = []
         args.epoch_loss = [] # train loss
 
+        args.epoch_distribution = []
+        args.epoch_centroid_min = []
+        args.epoch_centroid_max = []
+
         next_epoch = 0
 
     if not args.find_data_stats:
-        print("args:")
+        print("args/config:")
         print(config_to_str(args))
 
     sys.stdout.flush()
@@ -166,7 +158,7 @@ def main():
     fig, axarr = plt.subplots(3, sharex=False, figsize=(20, 20))
 
     # distr
-    distr_fig, distr_ax = plt.subplots(1, figsize=(20, 20))
+    distr_fig, distr_ax = plt.subplots(3, sharex=False, figsize=(20, 20))
 
     # Data ---------------------------------------------------------------------
 
@@ -253,9 +245,9 @@ def main():
 
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
-        acc = assess_acc(test_dataset, test_dataloader, model,
-                         len(test_dataset), fig_ax=(distr_fig, distr_ax),
-                         ext="pre")
+        acc, distribution, centroid_min_max = \
+            assess_acc(test_dataset, test_dataloader, model,
+                       len(test_dataset))
         print("got %f" % acc)
         sys.stdout.flush()
 
@@ -263,6 +255,9 @@ def main():
             exit(0)
 
         args.epoch_acc.append(acc)
+        args.epoch_distribution.append(list(distribution))
+        args.epoch_centroid_min.append(centroid_min_max[0])
+        args.epoch_centroid_max.append(centroid_min_max[1])
 
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
@@ -307,14 +302,9 @@ def main():
                      per_batch=(epoch == next_epoch))
 
         # assess ---------------------------------------------------------------
-        if epoch % args.dist_granularity == 0:
-            dist_ext = str(epoch)
-        else:
-            dist_ext = ""
 
-        acc = assess_acc(test_dataset, test_dataloader, model,
-                         len(test_dataset), fig_ax=(distr_fig, distr_ax),
-                         ext=dist_ext)
+        acc, distribution, centroid_min_max = \
+            assess_acc(test_dataset, test_dataloader, model, len(test_dataset))
 
         print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
               "time %s"
@@ -331,6 +321,10 @@ def main():
         args.epoch_loss.append(loss)
         args.epoch_cluster_dist.append(clustering_loss)
 
+        args.epoch_distribution.append(distribution)
+        args.epoch_centroid_min.append(centroid_min_max[0])
+        args.epoch_centroid_max.append(centroid_min_max[1])
+
         # draw graphs and save
         axarr[0].clear()
         axarr[0].plot(args.epoch_acc)
@@ -344,10 +338,27 @@ def main():
         axarr[2].plot(args.epoch_cluster_dist)
         axarr[2].set_title("Cluster distance")
 
+        distr_ax[0].clear()
+        epoch_distribution = np.array(args.epoch_distribution)
+        for gt_c in xrange(args.gt_k):
+            distr_ax[0].plot(epoch_distribution[:, gt_c])
+        distr_ax[0].set_title("Prediction distribution")
+
+        distr_ax[1].clear()
+        distr_ax[1].plot(args.epoch_centroid_min)
+        distr_ax[1].set_title("Centroid avg-of-abs: min")
+
+        distr_ax[2].clear()
+        distr_ax[2].plot(args.epoch_centroid_max)
+        distr_ax[2].set_title("Centroid avg-of-abs: max")
+
         # save -----------------------------------------------------------------
-        # graph
+        # graphs
         fig.canvas.draw_idle()
         fig.savefig(os.path.join(args.out_dir, "plots.png"))
+
+        distr_fig.canvas.draw_idle()
+        distr_fig.savefig(os.path.join(args.out_dir, "distribution.png"))
 
         # model
         if epoch % args.checkpoint_granularity == 0:
@@ -365,10 +376,10 @@ def main():
             args.best_epoch = epoch
 
         # args
-        with open(os.path.join(args.out_dir, "args.pickle"), 'w') as outfile:
+        with open(os.path.join(args.out_dir, "config.pickle"), 'w') as outfile:
             pickle.dump(args, outfile)
 
-        with open(os.path.join(args.out_dir, "args.txt"), "w") as text_file:
+        with open(os.path.join(args.out_dir, "config.txt"), "w") as text_file:
             text_file.write("%s" % args)
 
 def train(loader, model, crit, opt, epoch, per_batch=False):
@@ -446,7 +457,7 @@ def compute_features(dataloader, model, N):
 
     return features
 
-def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
+def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
@@ -469,9 +480,6 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     true_labels = np.array([test_dataset[i][1] for i in xrange(num_imgs)])
 
     predicted_labels = np.array([relabelled_test_dataset[i][1] for i in xrange(num_imgs)])
-    # assuming the order corresponds to indices, for centroids
-    analyse(predicted_labels, args.gt_k, fig_ax=fig_ax, ext=ext,
-            names=get_sizes(deepcluster.centroids))
 
     assert(true_labels.min() == 0)
     assert(true_labels.max() == args.gt_k - 1)
@@ -488,39 +496,22 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     for pred_i, target_i in match:
         reordered_preds[predicted_labels == pred_i] = target_i
 
-    #analyse(reordered_preds, args.gt_k, ext="reordered") shuld be same
+    distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
+                                             deepcluster.centroids)
 
-    return compute_acc(reordered_preds, true_labels, args.gt_k)
+    return compute_acc(reordered_preds, true_labels, args.gt_k), \
+           distribution, centroid_min_max
 
-def analyse(predictions, gt_k, fig_ax, ext="", names=None):
+def analyse(predictions, gt_k, centroids):
     # bar chart showing assignment per cluster centre (named)
 
     predictions = np.array(predictions)
     sums = np.array([sum(predictions == c) for c in xrange(gt_k)])
-
-    sorted_indices = np.argsort(sums).astype("int")
-    sums = list(sums[sorted_indices])
-
     assert(len(predictions) == sum(sums))
-    fig, ax = fig_ax
 
-    ax.clear()
-    ax.bar(range(gt_k), sums, align='center', alpha=0.5)
+    sizes = get_sizes(centroids)
 
-    if names is not None:
-        names = list(names[sorted_indices])
-        assert(len(names) == len(sums))
-        names = [str(c) for c in names]
-
-        ax.set_xticks(range(gt_k))
-        ax.set_xticklabels(names, rotation=45)
-
-    ax.set_ylabel("Counts")
-    ax.set_xlabel("Average abs value per centroid")
-
-    ax.set_title("Cluster distribution (%s)" % ext)
-    fig.canvas.draw_idle()
-    fig.savefig(os.path.join(args.out_dir, "distribution_%s.png" % ext))
+    return sums, (sizes.min(), sizes.max())
 
 def get_sizes(centroids):
     # k, d matrix
@@ -528,7 +519,7 @@ def get_sizes(centroids):
 
     k, d = centroids.shape
 
-    return centroids.sum(axis=1) / float(d)
+    return np.abs(centroids).sum(axis=1) / float(d)
 
 if __name__ == '__main__':
     main()
