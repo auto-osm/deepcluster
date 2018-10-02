@@ -76,8 +76,10 @@ parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                     default='Kmeans', help='clustering algorithm (default: Kmeans)')
 parser.add_argument('--lr', default=0.05, type=float,
                     help='learning rate (default: 0.05)')
-parser.add_argument('--wd', default=-5, type=float,
-                    help='weight decay pow (default: -5)')
+
+#parser.add_argument('--wd', default=-5, type=float,
+#                    help='weight decay pow (default: -5)')
+
 parser.add_argument('--reassign', type=float, default=1.,
                     help="""how many epochs of training between two consecutive
                     reassignments of clusters (default: 1)""")
@@ -86,7 +88,8 @@ parser.add_argument('--workers', default=0, type=int,
 parser.add_argument('--total_epochs', type=int, default=3200,
                     help='number of total epochs to run (default: 200)')
 
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum (default: 0.9)')
+#parser.add_argument('--momentum', default=0.9, type=float, help='momentum (
+# default: 0.9)')
 
 parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
