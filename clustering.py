@@ -153,7 +153,9 @@ def cluster_assign(args, images_lists, dataset, tra=None):
     for cluster, images in enumerate(images_lists):
         print("cluster %d num images %d" % (cluster, len(images)))
         image_indexes.extend(images)
-        pseudolabels.extend([cluster] * len(images))
+        to_add = [cluster] * len(images)
+        print(to_add[:50])
+        pseudolabels.extend(to_add)
 
     print("pseudolabels")
     print(pseudolabels[:50])
