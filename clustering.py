@@ -53,16 +53,18 @@ class ReassignedDataset(data.Dataset):
 
         print("in reassigned dataset")
         print("pseudolabels")
+        # why is this all 0s?
         print(pseudolabels[:50])
-        # reindex the pseudolabels for no reason?
+        # attempt to reindex the pseudolabels for no reason whilst cutting it
+        # short? This will currently do 0 -> 0?
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
         for j, idx in enumerate(image_indexes):
-            path = dataset[idx][0]
+            path = dataset[idx][0] # is this path or image? try other datasets
             pseudolabel = label_to_idx[pseudolabels[j]]
             images.append((path, pseudolabel))
-        print("images")
-        print(images[:50])
+        #print("images")
+        #print(images[:50])
         return images
 
     def __getitem__(self, index):
@@ -144,13 +146,17 @@ def cluster_assign(args, images_lists, dataset, tra=None):
         ReassignedDataset(torch.utils.data.Dataset): a dataset with clusters as
                                                      labels
     """
+    print("in cluster_assign")
     assert images_lists is not None
     pseudolabels = []
     image_indexes = []
     for cluster, images in enumerate(images_lists):
+        print("cluster %d num images %d" % len(images))
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
 
+    print("pseudolabels")
+    print(pseudolabels[:50])
     return ReassignedDataset(image_indexes, pseudolabels, dataset, tra)
 
 
