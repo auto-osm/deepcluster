@@ -477,27 +477,16 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     assert(true_labels.max() == args.gt_k - 1)
     assert(predicted_labels.min() >= 0)
     assert(predicted_labels.max() < args.gt_k)
-    print("predicted raw")
-    print(predicted_labels[:50])
-    print("true")
-    print(true_labels[:50])
 
     # hungarian matching
     num_correct = np.zeros((args.gt_k, args.gt_k))
     for i in xrange(num_imgs):
       num_correct[predicted_labels[i], true_labels[i]] += 1
     match = linear_assignment(num_imgs - num_correct)
-    print("match")
-    print(match)
 
-    reordered_preds = np.zeros(num_imgs)
+    reordered_preds = np.zeros(num_imgs, dtype="int")
     for pred_i, target_i in match:
         reordered_preds[predicted_labels == pred_i] = target_i
-
-    print("reordered")
-    print(reordered_preds[:50])
-    print("true")
-    print(true_labels[:50])
 
     #analyse(reordered_preds, args.gt_k, ext="reordered") shuld be same
 
