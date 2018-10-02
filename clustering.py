@@ -14,6 +14,7 @@ from scipy.sparse import csr_matrix, find
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+from utils.our_kmeans import run_our_kmeans
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -103,7 +104,6 @@ def preprocess_features(npdata):
 
     return npdata
 
-
 def make_graph(xb, nnn):
     """Builds a graph of nearest neighbors.
     Args:
@@ -125,7 +125,6 @@ def make_graph(xb, nnn):
     index.add(xb)
     D, I = index.search(xb, nnn + 1)
     return I, D
-
 
 def cluster_assign(args, images_lists, dataset, tra=None):
     """Creates a dataset from clustering, with clusters as labels.
@@ -203,7 +202,10 @@ class Kmeans:
         # cluster the data
         # I: data index -> k means cluster index
         # images_lists: k means cluster index -> data index
-        I, loss, centroids = run_kmeans(data, self.k, verbose) # TODO
+        # OLD: TODO
+        # I, loss, centroids = run_kmeans(data, self.k, verbose)
+
+        I, loss, centroids = run_our_kmeans(data, self.k)
 
         self.centroids = centroids
 

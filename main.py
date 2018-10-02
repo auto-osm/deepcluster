@@ -452,7 +452,6 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs, fig_ax, ext=""):
     features = compute_features(test_dataloader, model, num_imgs)
     _ = deepcluster.cluster(features, proc_feat=args.proc_feat,
                             verbose=args.verbose)
-
     relabelled_test_dataset = clustering.cluster_assign(args,
                                              deepcluster.images_lists,
                                              test_dataset)
