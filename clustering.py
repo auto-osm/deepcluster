@@ -49,20 +49,20 @@ class ReassignedDataset(data.Dataset):
         self.imgs = self.make_dataset(image_indexes, pseudolabels, dataset)
         self.transform = transform
 
-    def make_dataset(self, image_indexes, pseudolabels, dataset):
+    def make_dataset(self, shuffled_image_indexes, pseudolabels, dataset):
+        # pseudolabels is chunked 0...0, 1...1 etc
+        # attempt to reindex the pseudolabels for no reason
+        #label_to_idx = {label: idx for idx, label in enumerate(set(
+        # pseudolabels))}
 
-        print("in reassigned dataset")
-        print("pseudolabels")
-        # why is this all 0s?
-        print(pseudolabels[:50])
-        # attempt to reindex the pseudolabels for no reason whilst cutting it
-        # short? This will currently do 0 -> 0?
-        label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
-        images = []
+        # make images in original order of dataset so that it's lined up for
+        # assess
+        images = [None for _ in xrange(len(image_indexes))]
         for j, idx in enumerate(image_indexes):
-            path = dataset[idx][0] # is this path or image? try other datasets
-            pseudolabel = label_to_idx[pseudolabels[j]]
-            images.append((path, pseudolabel))
+            img = dataset[idx][0] # is this path or image? try other datasets
+            pseudolabel = pseudolabels[j]
+            #images.append((img, pseudolabel))
+            images[idx] = (img, pseudolabel)
         #print("images")
         #print(images[:50])
         return images
@@ -146,19 +146,13 @@ def cluster_assign(args, images_lists, dataset, tra=None):
         ReassignedDataset(torch.utils.data.Dataset): a dataset with clusters as
                                                      labels
     """
-    print("in cluster_assign")
     assert images_lists is not None
     pseudolabels = []
     image_indexes = []
     for cluster, images in enumerate(images_lists):
-        print("cluster %d num images %d" % (cluster, len(images)))
         image_indexes.extend(images)
-        to_add = [cluster] * len(images)
-        print(to_add[:50])
-        pseudolabels.extend(to_add)
+        pseudolabels.extend([cluster] * len(images))
 
-    print("pseudolabels")
-    print(pseudolabels[:50])
     return ReassignedDataset(image_indexes, pseudolabels, dataset, tra)
 
 
