@@ -207,6 +207,7 @@ def main():
     # CNN
     if args.verbose:
         print('Architecture: {}'.format(args.arch))
+        sys.stdout.flush()
     model = models.__dict__[args.arch](sobel=args.sobel, out=args.k,
                                        input_sp_sz=args.crop_sz, input_ch=args.input_ch)
     fd = model.dlen
@@ -246,6 +247,7 @@ def main():
 
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
+        sys.stdout.flush()
         acc, distribution, centroid_min_max = \
             assess_acc(test_dataset, test_dataloader, model,
                        len(test_dataset))
