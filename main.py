@@ -461,6 +461,10 @@ def compute_features(dataloader, model, N):
     return features
 
 def assess_acc(test_dataset, test_dataloader, model, num_imgs):
+    print("in assess acc")
+
+    print("model:")
+    print(model)
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
@@ -509,10 +513,13 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     print("distribution %s" % list(distribution))
     print("centroid_min_max %s" % list(centroid_min_max))
-    sys.stdout.flush()
 
-    return compute_acc(reordered_preds, true_labels, args.gt_k), \
-           distribution, centroid_min_max
+    acc = compute_acc(reordered_preds, true_labels, args.gt_k)
+    print("acc %f" % acc)
+
+    sys.stdout.flush()
+    exit(1)
+    return acc, distribution, centroid_min_max
 
 def analyse(predictions, gt_k, centroids):
     # bar chart showing assignment per cluster centre (named)
