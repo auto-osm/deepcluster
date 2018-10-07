@@ -464,8 +464,13 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
-    _ = deepcluster.cluster(features, proc_feat=args.proc_feat,
+
+    print("raw features size %s" % list(features.shape))
+
+    loss = deepcluster.cluster(features, proc_feat=args.proc_feat,
                             verbose=args.verbose)
+    print("clustering loss %f" % loss)
+    print("centroids size %s" % list(deepcluster.centroids.shape))
 
     #print("images_list sizes of clusterer after cluster")
     #for i in xrange(len(deepcluster.images_lists)):
@@ -501,6 +506,10 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
 
     distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
                                              deepcluster.centroids)
+
+    print("distribution %s" % list(distribution))
+    print("centroid_min_max %s" % list(centroid_min_max))
+    sys.stdout.flush()
 
     return compute_acc(reordered_preds, true_labels, args.gt_k), \
            distribution, centroid_min_max

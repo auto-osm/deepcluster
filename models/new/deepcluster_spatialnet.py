@@ -65,6 +65,7 @@ class DeepClusterSpatialNet(VGGNet):
         if penultimate:
             return x
 
+        print("non penultimate forward called")
         x = self.relu(x)
         x = self.top_layer(x)
         return x
