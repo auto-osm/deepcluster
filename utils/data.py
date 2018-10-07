@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import ConcatDataset
 import numpy as np
 
-def make_data(args, data_transform):
+def make_data(args, data_transform_train, data_transform_test):
   # return training dataset, training dataloader, and test dataloader
 
   target_transform = None
@@ -39,12 +39,12 @@ def make_data(args, data_transform):
 
   train_dataset, train_dataloader = \
     _make_dataset_and_dataloader(args, dataset_class, train_partitions,
-                                 data_transform=data_transform,
+                                 data_transform=data_transform_train,
                                  target_transform=None) # targets not used
 
   mapping_dataset, mapping_dataloader = \
     _make_dataset_and_dataloader(args, dataset_class, mapping_partitions,
-                                 data_transform=data_transform,
+                                 data_transform=data_transform_test,
                                  target_transform=target_transform)
 
   return train_dataset, train_dataloader, mapping_dataset, mapping_dataloader

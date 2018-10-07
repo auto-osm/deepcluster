@@ -39,8 +39,8 @@ parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
-parser.add_argument('--resize_sz', type=int, default=None)
-parser.add_argument('--crop_sz', type=int, required=True)
+parser.add_argument('--rand_crop_sz', type=int, default=None)
+parser.add_argument('--input_sz', type=int, required=True)
 
 parser.add_argument('--normalize', action='store_true', default=False)
 
@@ -174,11 +174,13 @@ def main():
 
     # preprocessing of data
     tra = []
-    if args.resize_sz is not None:
-        tra.append(transforms.Resize(args.resize_sz))
-    tra += [transforms.RandomCrop(args.crop_sz),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()]
+    tra_test = []
+    if args.rand_crop_sz is not None:
+        tra += [transforms.RandomCrop(args.rand_crop_sz)]
+        tra_test += [transforms.CenterCrop(args.rand_crop_sz)]
+
+    tra += [transforms.Resize(args.input_sz)]
+    tra_test += [transforms.Resize(args.input_sz)]
 
     args.data_mean = None # toggled on in cluster_assign
     args.data_std = None
@@ -188,11 +190,27 @@ def main():
         args.data_std = data_std
         normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
         tra.append(normalize)
+        tra_test.append(normalize)
+
+    # actual augmentation here
+    if not (args.dataset == "MNIST"):
+        tra += [transforms.RandomHorizontalFlip(),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4,
+                                       saturation=0.4, hue=0.125)
+                ]
+    else:
+        print("skipping horizontal flipping and jitter")
+
+    tra += [transforms.ToTensor()]
+    tra_test += [transforms.ToTensor()]
 
     tra = transforms.Compose(tra)
+    tra_test = transforms.Compose(tra_test)
 
     # load the data
-    dataset, dataloader, test_dataset, test_dataloader = make_data(args, tra)
+    dataset, dataloader, test_dataset, test_dataloader = make_data(args,
+                                                                   tra,
+                                                                   tra_test)
 
     if args.find_data_stats:
         print(args.dataset)
@@ -209,7 +227,7 @@ def main():
         print('Architecture: {}'.format(args.arch))
         sys.stdout.flush()
     model = models.__dict__[args.arch](sobel=args.sobel, out=args.k,
-                                       input_sp_sz=args.crop_sz, input_ch=args.input_ch)
+                                       input_sp_sz=args.input_sz, input_ch=args.input_ch)
     fd = model.dlen
     #model.features = torch.nn.DataParallel(model.features)
     model.cuda()
