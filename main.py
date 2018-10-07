@@ -39,7 +39,7 @@ parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
-parser.add_argument('--rand_crop_sz', type=int, default=None)
+parser.add_argument('--rand_crop_sz', type=int, default=-1)
 parser.add_argument('--input_sz', type=int, required=True)
 
 parser.add_argument('--normalize', action='store_true', default=False)
@@ -175,7 +175,7 @@ def main():
     # preprocessing of data
     tra = []
     tra_test = []
-    if args.rand_crop_sz is not None:
+    if args.rand_crop_sz != -1:
         tra += [transforms.RandomCrop(args.rand_crop_sz)]
         tra_test += [transforms.CenterCrop(args.rand_crop_sz)]
 
