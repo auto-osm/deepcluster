@@ -131,10 +131,14 @@ def main():
                next_epoch + 1))
 
         args.epoch_loss = args.epoch_loss[:next_epoch]
+        args.epoch_assess_cluster_loss = args.epoch_assess_cluster_loss[:next_epoch]
+
         args.epoch_cluster_dist = args.epoch_cluster_dist[:next_epoch]
         args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
     else:
         args.epoch_acc = []
+        args.epoch_assess_cluster_loss = []
+
         args.epoch_cluster_dist = []
         args.epoch_loss = [] # train loss
 
@@ -156,7 +160,7 @@ def main():
     np.random.seed(args.seed)
 
     # losses and acc
-    fig, axarr = plt.subplots(3, sharex=False, figsize=(20, 20))
+    fig, axarr = plt.subplots(4, sharex=False, figsize=(20, 20))
 
     # distr
     distr_fig, distr_ax = plt.subplots(3, sharex=False, figsize=(20, 20))
@@ -266,7 +270,7 @@ def main():
     if (not args.resume) or args.just_analyse:
         print("Doing some assessment")
         sys.stdout.flush()
-        acc, distribution, centroid_min_max = \
+        acc, distribution, centroid_min_max, assess_cluster_loss = \
             assess_acc(test_dataset, test_dataloader, model,
                        len(test_dataset))
         print("got %f" % acc)
@@ -276,6 +280,7 @@ def main():
             exit(0)
 
         args.epoch_acc.append(acc)
+        args.epoch_assess_cluster_loss.append(assess_cluster_loss)
         args.epoch_distribution.append(list(distribution))
         args.epoch_centroid_min.append(centroid_min_max[0])
         args.epoch_centroid_max.append(centroid_min_max[1])
@@ -324,7 +329,7 @@ def main():
 
         # assess ---------------------------------------------------------------
 
-        acc, distribution, centroid_min_max = \
+        acc, distribution, centroid_min_max, assess_cluster_loss = \
             assess_acc(test_dataset, test_dataloader, model, len(test_dataset))
 
         print("Model %d, epoch %d, cluster loss %f, train loss %f, acc %f "
@@ -339,6 +344,7 @@ def main():
             is_best = True
 
         args.epoch_acc.append(acc)
+        args.epoch_assess_cluster_loss.append(assess_cluster_loss)
         args.epoch_loss.append(loss)
         args.epoch_cluster_dist.append(clustering_loss)
 
@@ -357,7 +363,11 @@ def main():
 
         axarr[2].clear()
         axarr[2].plot(args.epoch_cluster_dist)
-        axarr[2].set_title("Cluster distance")
+        axarr[2].set_title("Cluster distance (train, k)")
+
+        axarr[3].clear()
+        axarr[3].plot(args.epoch_assess_cluster_loss)
+        axarr[3].set_title("Cluster distance (assess, gt_k)")
 
         distr_ax[0].clear()
         epoch_distribution = np.array(args.epoch_distribution)
@@ -479,20 +489,14 @@ def compute_features(dataloader, model, N):
     return features
 
 def assess_acc(test_dataset, test_dataloader, model, num_imgs):
-    print("in assess acc")
 
-    print("model:")
-    print(model)
     # new clusterer
     deepcluster = clustering.__dict__[args.clustering](args.gt_k)
     features = compute_features(test_dataloader, model, num_imgs)
 
-    print("raw features size %s" % list(features.shape))
-
-    loss = deepcluster.cluster(features, proc_feat=args.proc_feat,
-                            verbose=args.verbose)
-    print("clustering loss %f" % loss)
-    print("centroids size %s" % list(deepcluster.centroids.shape))
+    assess_cluster_loss = deepcluster.cluster(features,
+                                              proc_feat=args.proc_feat,
+                                              verbose=args.verbose)
 
     #print("images_list sizes of clusterer after cluster")
     #for i in xrange(len(deepcluster.images_lists)):
@@ -529,15 +533,9 @@ def assess_acc(test_dataset, test_dataloader, model, num_imgs):
     distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
                                              deepcluster.centroids)
 
-    print("distribution %s" % list(distribution))
-    print("centroid_min_max %s" % list(centroid_min_max))
-
     acc = compute_acc(reordered_preds, true_labels, args.gt_k)
-    print("acc %f" % acc)
 
-    sys.stdout.flush()
-    exit(1)
-    return acc, distribution, centroid_min_max
+    return acc, distribution, centroid_min_max, assess_cluster_loss
 
 def analyse(predictions, gt_k, centroids):
     # bar chart showing assignment per cluster centre (named)
