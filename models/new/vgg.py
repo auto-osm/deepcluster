@@ -4,10 +4,10 @@ class VGGTrunk(nn.Module):
   def __init__(self):
     super(VGGTrunk, self).__init__()
 
-  def _make_layers(self, batch_norm=True):
+  def _make_layers(self, batch_norm=True, last_relu=True):
     layers = []
     in_channels = self.in_channels
-    for tup in self.cfg:
+    for i, tup in enumerate(self.cfg):
       assert (len(tup) == 2)
       out, dilation = tup
       sz = self.conv_size
@@ -23,9 +23,16 @@ class VGGTrunk(nn.Module):
                            stride=stride, padding=pad,
                            dilation=dilation, bias=False)
         if batch_norm:
-          layers += [conv2d, nn.BatchNorm2d(out), nn.ReLU(inplace=True)]
+          layers += [conv2d, nn.BatchNorm2d(out)]
         else:
-          layers += [conv2d, nn.ReLU(inplace=True)]
+          layers += [conv2d]
+
+        if not (no_more_convs(i, self.cfg) and (not last_relu)):
+          layers += [nn.ReLU(inplace=True)]
+        else:
+          # there are no more convs and we don't want last relu
+          print("skipping last relu in feature layers of VGG")
+
         in_channels = out
 
     return nn.Sequential(*layers)
@@ -46,3 +53,12 @@ class VGGNet(nn.Module):
       elif isinstance(m, nn.Linear):
         m.weight.data.normal_(0, 0.01)
         m.bias.data.zero_()
+
+def no_more_convs(i, cfg):
+  for i2 in xrange(i + 1, len(cfg)):
+    out, dilation = cfg[i2]
+    if not ((out == "M") or (out == "A")):
+        # we found a conv
+      return False
+  return True
+
