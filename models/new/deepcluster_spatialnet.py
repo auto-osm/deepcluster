@@ -65,7 +65,6 @@ class DeepClusterSpatialNet(VGGNet):
         if penultimate:
             return x
 
-        print("non penultimate forward called")
         x = self.relu(x)
         x = self.top_layer(x)
         return x
@@ -74,15 +73,6 @@ class DeepClusterSpatialNet(VGGNet):
         # callled once at start of script
         self.top_layer = nn.Linear(self.dlen, self.out)
         self.top_layer.cuda()
-
-    def remove_feature_head_relu(self):
-        # called each epoch, pre-features
-        # dummy, because use of penultimate=True already skips relu
-        pass
-
-    def add_feature_head_relu(self):
-        # dummy, because penultimate=False already uses relu
-        pass
 
     def reset_top_layer(self):
         # called each epoch, post-features

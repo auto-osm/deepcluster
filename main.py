@@ -288,7 +288,7 @@ def main():
     # Train --------------------------------------------------------------------
     for epoch in range(next_epoch, args.total_epochs):
         # remove relu (getting features)
-        model.remove_feature_head_relu()
+        #model.remove_feature_head_relu()
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
@@ -320,7 +320,7 @@ def main():
             print("fd length: %d" % fd)
 
         # prepare for training by reintroducing relu and resetting last layer
-        model.add_feature_head_relu()
+        #model.add_feature_head_relu()
         model.reset_top_layer()
 
         # train network with clusters as pseudo-labels

@@ -57,20 +57,18 @@ class DeepClusterNet5g(ResNet):
     def __init__(self, sobel, out, input_sp_sz, input_ch):
         super(DeepClusterNet5g, self).__init__()
 
+        # features, used for pseudolabels
         self.features = DeepClusterNet5gTrunk(sobel, input_ch, input_sp_sz)
-
-        """
-        self.classifier = nn.Sequential(
-            nn.Linear(512 * BasicBlock.expansion, 4096),
-            nn.BatchNorm1d(4096),
-            nn.ReLU(True)
+        self.dlen = 4096
+        self.features_head = nn.Sequential(
+            nn.Linear(512 * BasicBlock.expansion, self.dlen)
         )
 
-        """
-
-        self.top_layer = nn.Linear(512 * self.features.feats_sp_sz *
-                                   self.features.feats_sp_sz,
-                                   out)
+        # used for training
+        self.relu = nn.ReLU(True)
+        self.dropout = nn.Dropout(0.5)
+        self.out = out
+        self.top_layer = None
 
         self._initialize_weights()
 
@@ -79,19 +77,25 @@ class DeepClusterNet5g(ResNet):
 
     def forward(self, x, penultimate=False):
         x = self.features(x)
-
-        #x = x.view(x.size(0), -1)
-        #x = self.classifier(x)
+        x = self.features_head(x)
 
         # used by assess code
         if penultimate:
             return x
 
-        if self.top_layer:
-            x = self.top_layer(x)
+        x = self.dropout(self.relu(x))
+        x = self.top_layer(x)
         return x
 
-def deepcluster_net5g(sobel=False, out=None, input_sp_sz=None, input_ch=None):
-    assert(False)
+    def make_top_layer(self):
+        # callled once at start of script
+        self.top_layer = nn.Linear(self.dlen, self.out)
+        self.top_layer.cuda()
 
+    def reset_top_layer(self):
+        # called each epoch, post-features
+        self.top_layer.weight.data.normal_(0, 0.01)
+        self.top_layer.bias.data.zero_()
+
+def deepcluster_net5g(sobel=False, out=None, input_sp_sz=None, input_ch=None):
     return DeepClusterNet5g(sobel, out, input_sp_sz, input_ch)
