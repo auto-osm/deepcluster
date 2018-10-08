@@ -440,6 +440,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         print("num batches: %d" % len(loader))
 
     for i, (input_tensor, target) in enumerate(loader):
+        opt.zero_grad()
+        optimizer_tl.zero_grad()
 
         # save checkpoint
         target = target.cuda(async=True)
@@ -454,8 +456,6 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         losses.update(float(loss.data), input_tensor.size(0))
 
         # compute gradient and do gradient step
-        opt.zero_grad()
-        optimizer_tl.zero_grad()
         loss.backward()
         opt.step()
         optimizer_tl.step()
