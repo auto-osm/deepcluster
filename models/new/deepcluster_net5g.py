@@ -65,10 +65,10 @@ class DeepClusterNet5g(ResNet):
 
         # features, used for pseudolabels
         self.features = DeepClusterNet5gTrunk(sobel, input_ch, input_sp_sz)
+        self.dlen = 4096
         self.features_head = nn.Sequential(
             nn.Linear(512 * BasicBlock.expansion, self.dlen)
         )
-        self.dlen = 4096
 
         # used for training
         self.relu = nn.ReLU(True)
