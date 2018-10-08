@@ -41,17 +41,19 @@ class DeepClusterNet6c(VGGNet):
                    (256, 1), ('M', None), (512, 1)]
             self.feats_sp_sz = 3
 
+        # features, used for pseudolabels
         self.features = DeepClusterNet6cTrunk(sobel, input_ch)
-
         self.last_conv = 512
         self.dlen = 1000
-
         self.feature_head = nn.Sequential(
             nn.Linear(self.last_conv * self.feats_sp_sz * self.feats_sp_sz, self.dlen),
             nn.BatchNorm1d(self.dlen),
             nn.ReLU(True)
         )
 
+        # used for training
+        self.relu = nn.ReLU(True)
+        self.dropout = nn.Dropout(0.5)
         self.out = out
         self.top_layer = None
 
@@ -68,6 +70,7 @@ class DeepClusterNet6c(VGGNet):
         if penultimate:
             return x
 
+        x = self.dropout(self.relu(x))
         x = self.top_layer(x)
         return x
 
@@ -76,23 +79,10 @@ class DeepClusterNet6c(VGGNet):
         self.top_layer = nn.Linear(self.dlen, self.out)
         self.top_layer.cuda()
 
-    def remove_feature_head_relu(self):
-        # called each epoch, pre-features
-        self.feature_head = nn.Sequential(
-            *(list(self.feature_head.children())[:-1]))
-
-    def add_feature_head_relu(self):
-        # called each epoch, post-features
-        mlp = list(self.feature_head.children())
-        assert(not ("ReLU" in str(mlp[-1])))
-        mlp.append(nn.ReLU(inplace=True).cuda())
-        self.feature_head = nn.Sequential(*mlp)
-
     def reset_top_layer(self):
         # called each epoch, post-features
         self.top_layer.weight.data.normal_(0, 0.01)
         self.top_layer.bias.data.zero_()
 
 def deepcluster_net6c(sobel=False, out=None, input_sp_sz=None, input_ch=None):
-    assert(False)
     return DeepClusterNet6c(sobel, out, input_sp_sz, input_ch)

@@ -85,7 +85,7 @@ class DeepClusterNet5g(ResNet):
         x = self.features(x)
         x = self.features_head(x)
 
-        # used by assess code
+        # used by assess code and features
         if penultimate:
             return x
 

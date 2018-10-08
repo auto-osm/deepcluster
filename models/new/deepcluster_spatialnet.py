@@ -38,7 +38,11 @@ class DeepClusterSpatialNet(VGGNet):
         DeepClusterSpatialNet.cfg = [(64, 1), ('M', None), (128, 1),
                                      ('M', None),  (256, 1), (512, 1),
                                      ('M', None)]
-        self.feats_sp_sz = 4
+
+        if input_sp_sz == 32:
+            self.feats_sp_sz = 4
+        elif input_sp_sz == 24:
+            self.feats_sp_sz = 3
 
         # used for kmeans, make the pseudolabels
         self.last_conv = 512
