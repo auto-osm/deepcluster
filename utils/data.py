@@ -37,6 +37,8 @@ def make_data(args, data_transform_train, data_transform_test):
   else:
     assert(False)
 
+  print("target transform: %s" % target_transform)
+
   train_dataset, train_dataloader = \
     _make_dataset_and_dataloader(args, dataset_class, train_partitions,
                                  data_transform=data_transform_train,

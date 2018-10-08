@@ -259,7 +259,7 @@ def main():
         optimizer.load_state_dict(checkpoint['optimizer'])
 
     # after optimiser loading done, add a top layer
-    model.make_top_layer()
+    #model.make_top_layer()
 
     # define loss function
     criterion = nn.CrossEntropyLoss().cuda()
@@ -321,7 +321,7 @@ def main():
 
         # prepare for training by reintroducing relu and resetting last layer
         #model.add_feature_head_relu()
-        model.reset_top_layer()
+        #model.reset_top_layer()
 
         # train network with clusters as pseudo-labels
         loss = train(train_dataloader, model, criterion, optimizer, epoch,
@@ -425,6 +425,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     """
     losses = AverageMeter()
 
+    model.set_new_top_layer()
+
     # switch to train mode
     model.train()
 
@@ -443,7 +445,6 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         opt.zero_grad()
         optimizer_tl.zero_grad()
 
-        # save checkpoint
         target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input_tensor.cuda())
         target_var = torch.autograd.Variable(target)

@@ -74,6 +74,7 @@ class DeepClusterNet6c(VGGNet):
         x = self.top_layer(x)
         return x
 
+    """
     def make_top_layer(self):
         # callled once at start of script
         self.top_layer = nn.Linear(self.dlen, self.out)
@@ -81,6 +82,14 @@ class DeepClusterNet6c(VGGNet):
 
     def reset_top_layer(self):
         # called each epoch, post-features
+        self.top_layer.weight.data.normal_(0, 0.01)
+        self.top_layer.bias.data.zero_()
+    
+    """
+    def set_new_top_layer(self):
+        # called each epoch, post-features
+        self.top_layer = nn.Linear(self.dlen, self.out)
+        self.top_layer.cuda()
         self.top_layer.weight.data.normal_(0, 0.01)
         self.top_layer.bias.data.zero_()
 
