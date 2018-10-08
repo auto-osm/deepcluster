@@ -3,7 +3,7 @@ from vgg import VGGTrunk, VGGNet
 from make_sobel import make_sobel
 # for 24x24 or 64x64
 
-__all__ = [ 'deepcluster_net6c']
+__all__ = [ 'deepcluster_net6c_v288']
 
 class DeepClusterNet6cV288Trunk(VGGTrunk):
     def __init__(self, sobel, input_ch):
