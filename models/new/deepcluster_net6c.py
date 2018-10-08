@@ -90,8 +90,8 @@ class DeepClusterNet6c(VGGNet):
         # called each epoch, post-features
         self.top_layer = nn.Linear(self.dlen, self.out)
         self.top_layer.cuda()
-        self.top_layer.weight.data.normal_(0, 0.01)
-        self.top_layer.bias.data.zero_()
+        #self.top_layer.weight.data.normal_(0, 0.01)
+        #self.top_layer.bias.data.zero_()
 
 def deepcluster_net6c(sobel=False, out=None, input_sp_sz=None, input_ch=None):
     return DeepClusterNet6c(sobel, out, input_sp_sz, input_ch)

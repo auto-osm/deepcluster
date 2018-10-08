@@ -238,6 +238,7 @@ def main():
     cudnn.benchmark = True
 
     # create optimizer
+    # top layer not created at this point!
     assert(model.top_layer is None)
     optimizer = torch.optim.Adam(
         filter(lambda x: x.requires_grad, model.parameters()),
@@ -445,21 +446,20 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
         opt.zero_grad()
         optimizer_tl.zero_grad()
 
-        target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input_tensor.cuda())
-        target_var = torch.autograd.Variable(target)
+        target_var = torch.autograd.Variable(target.cuda())
 
         output = model(input_var)
 
         loss = crit(output, target_var)
 
-        # record loss
-        losses.update(float(loss.data), input_tensor.size(0))
-
         # compute gradient and do gradient step
         loss.backward()
         opt.step()
         optimizer_tl.step()
+
+        # record loss
+        losses.update(float(loss.data), input_tensor.size(0))
 
         if ((i % 100) == 0) or per_batch:
             print("... epoch %d batch %d train loss %f time %s" %
