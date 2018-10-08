@@ -25,12 +25,16 @@ class DeepClusterNet5gTrunk(ResNetTrunk):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+
         if input_sp_sz == 96:
-            self.feats_sp_sz = 7
+            self.avg_pool_sz = 7
         elif input_sp_sz == 64:
-            self.feats_sp_sz = 5
+            self.avg_pool_sz = 5
         elif input_sp_sz == 32:
-            self.feats_sp_sz = 3
+            self.avg_pool_sz = 3
+        print("avg_pool_sz %d" % self.avg_pool_sz)
+
+        self.avgpool = nn.AvgPool2d(self.avg_pool_sz, stride=1)
 
         self.use_sobel = sobel
         self.sobel = None
@@ -49,6 +53,8 @@ class DeepClusterNet5gTrunk(ResNetTrunk):
         x = self.layer3(x)
         x = self.layer4(x)
 
+        x = self.avgpool(x)
+
         x = x.view(x.size(0), -1)
 
         return x
@@ -59,10 +65,10 @@ class DeepClusterNet5g(ResNet):
 
         # features, used for pseudolabels
         self.features = DeepClusterNet5gTrunk(sobel, input_ch, input_sp_sz)
-        self.dlen = 4096
         self.features_head = nn.Sequential(
             nn.Linear(512 * BasicBlock.expansion, self.dlen)
         )
+        self.dlen = 4096
 
         # used for training
         self.relu = nn.ReLU(True)
