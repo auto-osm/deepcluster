@@ -198,13 +198,14 @@ def main():
 
     # actual augmentation here
     if not (args.dataset == "MNIST"):
-        tra += [transforms.RandomHorizontalFlip()]
+        tra += [transforms.RandomHorizontalFlip(),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4,
+                                       saturation=0.4, hue=0.125)
+                ]
 
     else:
-        print("skipping horizontal flipping (not jitter)")
+        print("skipping horizontal flipping and jitter")
 
-    tra += [transforms.ColorJitter(brightness=0.4, contrast=0.4,
-                                       saturation=0.4, hue=0.125)]
     tra += [transforms.ToTensor()]
     tra_test += [transforms.ToTensor()]
 
