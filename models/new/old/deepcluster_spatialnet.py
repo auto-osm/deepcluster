@@ -1,6 +1,6 @@
 import torch.nn as nn
-from vgg import VGGTrunk, VGGNet
-from make_sobel import make_sobel
+from models.new.vgg import VGGTrunk, VGGNet
+from models.new.make_sobel import make_sobel
 # for 24x24 or 64x64
 
 __all__ = [ 'deepcluster_spatialnet']
