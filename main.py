@@ -69,7 +69,8 @@ parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
                     choices=['alexnet', 'vgg11', 'deepcluster_net6c',
                              'deepcluster_net5g', 'deepcluster_spatialnet',
                              'deepcluster_net6c_v288',
-                             'deepcluster_net5g_v288'],
+                             'deepcluster_net5g_v288',
+                             'deepcluster_wideresnet'],
                     required=True)
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
