@@ -47,6 +47,9 @@ parser.add_argument('--normalize', action='store_true', default=False)
 parser.add_argument("--dataset", type=str, required=True)
 parser.add_argument("--dataset_root", type=str, required=True)
 
+# default is to use unlabelled (model 334)
+parser.add_argument('--if_stl_dont_use_unlabelled', action='store_true', default=False)
+
 parser.add_argument('--batch_sz', default=256, type=int,
                     help='mini-batch size (default: 256)')
 
@@ -138,6 +141,9 @@ def main():
 
         args.epoch_cluster_dist = args.epoch_cluster_dist[:next_epoch]
         args.epoch_acc = args.epoch_acc[:(next_epoch + 1)]
+
+        if not hasattr(args, "if_stl_dont_use_unlabelled"):
+          args.if_stl_dont_use_unlabelled = False
     else:
         args.epoch_acc = []
         args.epoch_assess_cluster_loss = []

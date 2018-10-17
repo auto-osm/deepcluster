@@ -11,7 +11,12 @@ def make_data(args, data_transform_train, data_transform_test):
   if "STL10" == args.dataset:
     dataset_class = torchvision.datasets.STL10
 
-    train_partitions = ["train+unlabeled", "test"] #["train", "test"] # 
+    if args.if_stl_dont_use_unlabelled:
+      print("not using unlabelled stl")
+      train_partitions = ["train", "test"]
+    else:
+      print("using unlabelled stl")
+      train_partitions = ["train+unlabeled", "test"]
     mapping_partitions = ["train", "test"] # labelled only
 
   elif "CIFAR" in args.dataset:
