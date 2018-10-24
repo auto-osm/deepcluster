@@ -162,9 +162,8 @@ def main():
             p=args.cutout_p)
     )
 
-  # done in TenCropAndFinish
-  #tra += [transforms.ToTensor()]
-  #tra_test += [transforms.ToTensor()]
+  tra += [transforms.ToTensor()]
+  #tra_test += [transforms.ToTensor()] # done in TenCropAndFinish
 
   tra = transforms.Compose(tra)
   tra_test = transforms.Compose(tra_test)
