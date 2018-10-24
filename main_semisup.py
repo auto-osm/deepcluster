@@ -100,6 +100,9 @@ def main():
   torch.cuda.manual_seed_all(args.seed)
   np.random.seed(args.seed)
 
+  args.epoch_acc = []
+  args.epoch_loss = []
+
   # losses and acc
   fig, axarr = plt.subplots(2, sharex=False, figsize=(20, 20))
 
