@@ -1,5 +1,6 @@
 from torch.utils.data.dataset import Dataset
 from torchvision import transforms
+import torchvision.transforms.functional as tf
 
 # sobel is done in network
 class TenCropAndFinish(Dataset):
@@ -21,7 +22,8 @@ class TenCropAndFinish(Dataset):
 
     img = self.crops_tf(img)[crop_idx]
 
-    return img, target
+    # to_tensor handles swapping of channels from PIL image
+    return tf.to_tensor(img), target
 
   def __len__(self):
     return self.base_dataset.__len__() * self.num_tfs
