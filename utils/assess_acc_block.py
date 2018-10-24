@@ -9,7 +9,7 @@ def assess_acc_block(net, test_loader, gt_k, contiguous_sz):
   net.eval()
   for i, (imgs, targets) in enumerate(test_loader):
     with torch.no_grad():
-      x_out = net(imgs.cuda(), penultimate=True)
+      x_out = net(imgs.cuda())
 
     bn, dlen = x_out.shape
     if all is None:

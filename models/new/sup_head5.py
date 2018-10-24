@@ -27,6 +27,6 @@ class SupHead5(nn.Module):
         m.bias.data.zero_()
 
   def forward(self, x):
-    x = self.trunk(x, trunk_features=True, penultimate=True)
+    x = self.trunk(x, penultimate=True)
     x = self.head(x) # no softmax
     return x
