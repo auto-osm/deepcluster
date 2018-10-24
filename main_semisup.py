@@ -35,8 +35,6 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--old_model_ind', type=int, required=True)  # for features
 
-parser.add_argument('--gt_k', type=int, required=True)
-
 # default is to use unlabelled (model 334)
 
 parser.add_argument("--out_root", type=str,
@@ -214,7 +212,8 @@ def main():
   features.load_state_dict(checkpoint['state_dict'])
 
   # wrap features in suphead
-  model = SupHead5(features, dlen=features.dlen, gt_k=args.gt_k)
+  print("old gt_k is: %d" % old_args.gt_k)
+  model = SupHead5(features, dlen=features.dlen, gt_k=old_args.gt_k)
 
   # model = torch.nn.DataParallel(model)
   model.cuda()
@@ -235,7 +234,7 @@ def main():
 
   print("Doing pre assessment")
   sys.stdout.flush()
-  acc = assess_acc_block(model, test_loader, gt_k=args.gt_k,
+  acc = assess_acc_block(model, test_loader, gt_k=old_args.gt_k,
                          contiguous_sz=contiguous_sz)
   print("got %f" % acc)
   sys.stdout.flush()
@@ -250,7 +249,7 @@ def main():
 
     # assess ---------------------------------------------------------------
 
-    acc = assess_acc_block(model, test_loader, gt_k=args.gt_k,
+    acc = assess_acc_block(model, test_loader, gt_k=old_args.gt_k,
                            contiguous_sz=contiguous_sz)
 
     print("Model %d, epoch %d, train loss %f, acc %f, time %s"
