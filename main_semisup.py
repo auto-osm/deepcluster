@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 
 import matplotlib
 
@@ -22,11 +21,11 @@ from datetime import datetime
 import models
 import pickle
 
-from utils.util import AverageMeter, UnifLabelSampler
-from utils.ten_crop_and_finish import TenCropAndFinish
-from models.new.sup_head5 import SupHead5
-from utils.assess_acc_block import assess_acc_block
-from utils.custom_cutout import custom_cutout
+from utils import AverageMeter
+from utils.clustering.ten_crop_and_finish import TenCropAndFinish
+from models.new import SupHead5
+from utils import assess_acc_block
+from utils import custom_cutout
 from PIL import Image
 
 parser = argparse.ArgumentParser(

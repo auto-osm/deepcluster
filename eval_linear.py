@@ -18,7 +18,7 @@ import torch.utils.data
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
-from utils.util import AverageMeter, learning_rate_decay, load_model, Logger
+from utils import AverageMeter, learning_rate_decay, load_model, Logger
 
 parser = argparse.ArgumentParser(description="""Train linear classifier on top
                                  of frozen convolutional layers of an AlexNet.""")

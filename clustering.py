@@ -4,17 +4,13 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-import time
 
 import faiss
 import numpy as np
-from PIL import Image
-from PIL import ImageFile
-from scipy.sparse import csr_matrix, find
 import torch
 import torch.utils.data as data
-import torchvision.transforms as transforms
-from utils.our_kmeans import run_our_kmeans
+from PIL import Image
+from PIL import ImageFile
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 

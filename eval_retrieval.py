@@ -19,7 +19,7 @@ import torchvision
 from PIL import Image
 from torch.autograd import Variable
 
-from utils.util import load_model
+from utils import load_model
 
 
 class ImageHelper:

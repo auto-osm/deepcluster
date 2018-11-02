@@ -1,3 +1,3 @@
-from .vgg11 import *
+from models.new import *
 from .alexnet import *
-from .new import *
+from .vgg11 import *
