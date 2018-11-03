@@ -28,7 +28,6 @@ from utils.clustering.util import AverageMeter, UnifLabelSampler, \
 from utils.clustering.data import compute_data_stats
 
 import clustering_segmentation
-from utils.segmentation.loss import CustomCrossEntropyLoss
 from utils.segmentation.data import make_data_segmentation
 from utils.segmentation.util import compute_spatial_features
 from utils.segmentation.assess_acc import assess_acc_segmentation
@@ -175,14 +174,14 @@ def main():
 
   if args.dataset == "Potsdam":
     assert(not args.do_sobel and args.do_rgb) # IID experiment settings
-    args.input_ch = 4 # rgbir
+    args.in_channels = 4 # rgbir
   elif "Coco" in args.dataset:
     # unlike image clustering script, extra sobel_and_rgb setting
-    args.input_ch = 0
+    args.in_channels = 0
     if args.do_rgb: # new naming to avoid confusion with clustering script
-      args.input_ch += 3
+      args.in_channels += 3
     if args.do_sobel:
-      args.input_ch += 2
+      args.in_channels += 2
 
   if "Coco" in args.dataset:
     args.train_partitions = ["train2017", "val2017"]
@@ -206,11 +205,7 @@ def main():
   if args.verbose:
     print('Architecture: {}'.format(args.arch))
     sys.stdout.flush()
-  model = models.__dict__[args.arch](sobel_and_rgb=args.sobel_and_rgb,
-                                     sobel=args.sobel,
-                                     out=args.k,
-                                     input_sp_sz=args.input_sz,
-                                     input_ch=args.input_ch)
+  model = models.__dict__[args.arch](args)
   fd = model.dlen
   # model.features = torch.nn.DataParallel(model.features)
   model.cuda()
@@ -237,7 +232,7 @@ def main():
     optimizer.load_state_dict(checkpoint['optimizer'])
 
   # define loss function
-  criterion = CustomCrossEntropyLoss
+  criterion = nn.CrossEntropyLoss().cuda()
 
   # clustering algorithm to use
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
@@ -413,16 +408,22 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
   if per_batch:
     print("num batches: %d" % len(loader))
 
-  for i, (input_tensor, mask, target) in enumerate(loader):
+  for i, (imgs, masks, targets) in enumerate(loader):
     opt.zero_grad()
     optimizer_tl.zero_grad()
 
-    input_var = torch.autograd.Variable(input_tensor.cuda())
-    target_var = torch.autograd.Variable(target.cuda())
+    imgs = imgs.cuda()
+    targets = targets.cuda()
 
-    output = model(input_var)
+    x_out = model(imgs)
 
-    loss = crit(output, mask, target_var)
+    assert(isinstance(masks, torch.Tensor) and masks.dtype == torch.uint8)
+    assert(isinstance(targets, torch.Tensor))
+
+    x_out = x_out.masked_select(masks)
+    targets = targets.masked_select(masks)
+
+    loss = crit(x_out, targets)
 
     # compute gradient and do gradient step
     loss.backward()
@@ -430,7 +431,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     optimizer_tl.step()
 
     # record loss
-    losses.update(float(loss.data), input_tensor.size(0))
+    losses.update(float(loss.data), imgs.size(0))
 
     if ((i % 100) == 0) or per_batch:
       print("... epoch %d batch %d train loss %f time %s" %

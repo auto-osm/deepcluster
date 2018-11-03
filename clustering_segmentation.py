@@ -18,8 +18,14 @@ class ReassignedDataset(data.Dataset):
     assert(self.pseudolabels.shape[0] == len(self.base_dataset))
 
   def __getitem__(self, index):
-    imgs, masks = self.base_dataset[index]
-    return (imgs, masks, torch.from_numpy(self.pseudolabels[index]).cuda())
+    if self.base_dataset.purpose == "train":
+      imgs, masks = self.base_dataset[index]
+      return (imgs, masks, torch.from_numpy(self.pseudolabels[index]).cuda())
+    else:
+      assert(self.base_dataset.purpose == "test")
+      imgs, labels, masks = self.base_dataset[index]
+      return (imgs, masks, torch.from_numpy(self.pseudolabels[index]).cuda(),
+              labels)
 
   def __len__(self):
     return len(self.base_dataset)
