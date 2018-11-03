@@ -310,7 +310,7 @@ def main():
     # model.remove_feature_head_relu()
 
     # get the features for the whole dataset
-    features = compute_features(dataloader, model, len(dataset))
+    features = compute_features(args, dataloader, model, len(dataset))
 
     # cluster the features
     clustering_loss = deepcluster.cluster(features,

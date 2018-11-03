@@ -71,12 +71,6 @@ parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
                     default='deepcluster_net10a_seg',
                     required=True)
 
-parser.add_argument('--sobel_and_rgb', action='store_true',
-                    help='Sobel and rgb')
-parser.add_argument('--sobel', action='store_true',
-                    help='Sobel only. If false and not sobel_and_rgb,'
-                         'only use rgb(ir).')
-
 parser.add_argument('--clustering', type=str, choices=['Kmeans'],
                     default='Kmeans')
 parser.add_argument('--lr', default=0.05, type=float,
@@ -94,13 +88,21 @@ parser.add_argument('--seed', type=int, default=31,
                     help='random seed (default: 31)')
 parser.add_argument('--verbose', action='store_true', help='chatty')
 
-# TODO
-# means, std
-_DATASET_NORM = {
-  "Potsdam": None,
-  "Coco164kCuratedFew": None,
-  "Coco164kCuratedFull": None
-}
+# -------------
+
+parser.add_argument('--do_sobel', action='store_true', default=False)
+parser.add_argument('--do_rgb', action='store_true', default=False)
+
+parser.add_argument("--pre_scale_all", default=False, action="store_true") # new
+parser.add_argument("--pre_scale_factor", type=float, default=0.5) #
+
+parser.add_argument("--jitter_brightness", type=float, default=0.4)
+parser.add_argument("--jitter_contrast", type=float, default=0.4)
+parser.add_argument("--jitter_saturation", type=float, default=0.4)
+parser.add_argument("--jitter_hue", type=float, default=0.125)
+
+# flip equivariance
+parser.add_argument("--flip_p", type=float, default=0.5)
 
 def main():
   global args
@@ -172,66 +174,31 @@ def main():
   # Data ---------------------------------------------------------------------
 
   if args.dataset == "Potsdam":
-    assert(not args.sobel and (not args.sobel_and_rgb)) # IID experiment settings
+    assert(not args.do_sobel and args.do_rgb) # IID experiment settings
     args.input_ch = 4 # rgbir
   elif "Coco" in args.dataset:
     # unlike image clustering script, extra sobel_and_rgb setting
-    if args.sobel_and_rgb:
-      args.input_ch = 5
-    elif args.sobel: # just sobel
-      args.input_ch = 2
-    else: # just rgb
-      args.input_ch = 3
+    args.input_ch = 0
+    if args.do_rgb: # new naming to avoid confusion with clustering script
+      args.input_ch += 3
+    if args.do_sobel:
+      args.input_ch += 2
 
-  # preprocessing of data
-  tra = []
-  tra_test = []
-  if args.rand_crop_sz != -1:
-    tra += [transforms.RandomCrop(args.rand_crop_sz)]
-    tra_test += [transforms.CenterCrop(args.rand_crop_sz)]
-
-  tra += [transforms.Resize(args.input_sz)]
-  tra_test += [transforms.Resize(args.input_sz)]
-
-  args.data_mean = None
-  args.data_std = None
-  if args.normalize and (not args.find_data_stats):
-    data_mean, data_std = _DATASET_NORM[args.dataset]
-    args.data_mean = data_mean
-    args.data_std = data_std
-    normalize = transforms.Normalize(mean=args.data_mean, std=args.data_std)
-    tra.append(normalize)
-    tra_test.append(normalize)
-
-  # actual augmentation here, consistent with IID experiment settings
   if "Coco" in args.dataset:
-    tra += [transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4,
-                                   saturation=0.4, hue=0.125)
-            ]
+    args.train_partitions = ["train2017", "val2017"]
+    args.test_partitions = ["train2017", "val2017"]
   elif args.dataset == "Potsdam":
-    tra += [transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.1, contrast=0.1,
-                                   saturation=0.1, hue=0.1)
-            ]
-
-  tra += [transforms.ToTensor()]
-  tra_test += [transforms.ToTensor()]
-
-  tra = transforms.Compose(tra)
-  tra_test = transforms.Compose(tra_test)
+    args.train_partitions = ["unlabelled_train", "labelled_train",
+                               "labelled_test"]
+    args.test_partitions = ["labelled_train", "labelled_test"]
+  else:
+    assert (False)
 
   # load the data
+  # transforms consistent with other experiments are taken care of within the
+  # dataset, which gets passed the settings
   dataset, dataloader, test_dataset, test_dataloader = make_data_segmentation(
-    args, tra, tra_test)
-
-  if args.find_data_stats:
-    print(args.dataset)
-    print("train dataset mean, std: %s, %s" %
-          compute_data_stats(dataloader, len(dataset)))
-    print("test dataset mean, std: %s, %s" %
-          compute_data_stats(test_dataloader, len(test_dataset)))
-    exit(0)
+    args)
 
   # Model --------------------------------------------------------------------
 
@@ -312,21 +279,16 @@ def main():
     # i.e. set flat labels for each image, n, h, w (applying stored
     # assessment to generate new dataset)
     # get masks from original dataset
-    train_dataset = clustering_segmentation.cluster_assign(args,
+    train_dataset = clustering_segmentation.cluster_assign(
                                               deepcluster.pseudolabelled_imgs,
-                                              dataset,
-                                              tra=tra)
+                                              dataset)
 
     # randomly sample as an approximation of evenly distributed batches
-    sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),
-                               deepcluster.images_lists)
-
     train_dataloader = torch.utils.data.DataLoader(
       train_dataset,
       batch_size=args.batch_sz,
       num_workers=args.workers,
-      sampler=sampler,
-      pin_memory=True,
+      shuffle=True
     )
 
     if epoch == next_epoch:
@@ -446,7 +408,6 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
   optimizer_tl = torch.optim.Adam(
     model.top_layer.parameters(),
     lr=args.lr,
-    # weight_decay=10**args.wd,
   )
 
   if per_batch:

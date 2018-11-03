@@ -1,115 +1,35 @@
-# Copyright (c) 2017-present, Facebook, Inc.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-#
-
 import faiss
 import numpy as np
+import torch
 import torch.utils.data as data
+from clustering import preprocess_features
 
 __all__ = ['Kmeans', 'cluster_assign']
 
 class ReassignedDataset(data.Dataset):
-  """A dataset where the new images labels are given in argument.
-  Args:
-      image_indexes (list): list of image indexes in the dataset
-      pseudolabels (list): list of labels for each image
-                           lines up with image_indexes
-      dataset (list): list of tuples with paths to images
-      transform (callable, optional): a function/transform that takes in
-                                      an PIL image and returns a
-                                      transformed version
-  """
+  """A dataset where the new images labels are given in argument."""
 
-  def __init__(self, image_indexes, pseudolabels, dataset, transform=None):
-    self.imgs = self.make_dataset(image_indexes, pseudolabels, dataset)
-    self.transform = transform
+  def __init__(self, pseudolabels, dataset):
+    # recall pseudolabels contain garbage at mask locations
+    self.pseudolabels = pseudolabels
+    self.base_dataset = dataset
 
-  def make_dataset(self, shuffled_image_indexes, pseudolabels, dataset):
-    # passed in: list of image names (index in dataset) and list of
-    # pseudolabels
-
-    # pseudolabels is chunked 0...0, 1...1 etc
-    # attempt to reindex the pseudolabels for no reason?
-    # label_to_idx = {label: idx for idx, label in enumerate(set(
-    # pseudolabels))}
-
-    # make images in original order of dataset so that it's lined up for
-    # assess
-    images = [None for _ in xrange(len(shuffled_image_indexes))]
-    for j, idx in enumerate(shuffled_image_indexes):
-      img = dataset[idx][0]  # path or image, either way, identifier
-      pseudolabel = pseudolabels[j]
-      # images.append((img, pseudolabel))
-      images[idx] = (img, pseudolabel)
-    # print("images")
-    # print(images[:50])
-    return images
+    assert(isinstance(self.pseudolabels, np.ndarray))
+    assert(self.pseudolabels.shape[0] == len(self.base_dataset))
 
   def __getitem__(self, index):
-    """
-    Args:
-        index (int): index of data
-    Returns:
-        tuple: (image, pseudolabel) where pseudolabel is the cluster of index 
-        datapoint
-    """
-    path, pseudolabel = self.imgs[index]
-
-    return path, pseudolabel
+    imgs, masks = self.base_dataset[index]
+    return (imgs, masks, torch.from_numpy(self.pseudolabels[index]).cuda())
 
   def __len__(self):
-    return len(self.imgs)
+    return len(self.base_dataset)
 
-def preprocess_features(npdata):
-  """Preprocess an array of features.
-  Args:
-      npdata (np.array N * ndim): features to preprocess
-      pca (int): dim of output
-  Returns:
-      np.array of dim N * pca: data PCA-reduced, whitened and L2-normalized
-  """
-  _, ndim = npdata.shape
-  npdata = npdata.astype('float32')
-
-  # quarter the dimensions
-  pca = int(ndim / 4.)
-
-  # Apply PCA-whitening with Faiss
-  mat = faiss.PCAMatrix(ndim, pca, eigen_power=-0.5)
-  mat.train(npdata)
-  assert mat.is_trained
-  npdata = mat.apply_py(npdata)
-
-  # L2 normalization
-  row_sums = np.linalg.norm(npdata, axis=1)
-  npdata = npdata / row_sums[:, np.newaxis]
-
-  return npdata
-
-def cluster_assign(args, images_lists, dataset, tra=None):
+def cluster_assign(pseudolabels, dataset):
   """Creates a dataset from clustering, with clusters as labels.
-  Args:
-      images_lists (list of list): for each cluster, the list of image indexes
-                                  belonging to this cluster
-      dataset (list): initial dataset
-  Returns:
-      ReassignedDataset(torch.utils.data.Dataset): a dataset with clusters as
-                                                   labels
   """
-  assert images_lists is not None
-  pseudolabels = []
-  image_indexes = []
-  for cluster, images in enumerate(images_lists):
-    image_indexes.extend(images)
-    pseudolabels.extend([cluster] * len(images))
+  return ReassignedDataset(pseudolabels, dataset)
 
-  return ReassignedDataset(image_indexes, pseudolabels, dataset, tra)
-
-
-def run_kmeans(x, nmb_clusters, verbose=False):
+def run_kmeans(unmasked_vectorised_feat, nmb_clusters, x, verbose=False):
   """Runs kmeans on 1 GPU.
   Args:
       x: data
@@ -117,7 +37,7 @@ def run_kmeans(x, nmb_clusters, verbose=False):
   Returns:
       list: ids of data in each cluster
   """
-  n_data, d = x.shape
+  n_data, d = unmasked_vectorised_feat.shape
 
   # faiss implementation of k-means
   clus = faiss.Clustering(d, nmb_clusters)
@@ -130,46 +50,53 @@ def run_kmeans(x, nmb_clusters, verbose=False):
   index = faiss.GpuIndexFlatL2(res, d, flat_config)
 
   # perform the training
-  clus.train(x, index)
+  clus.train(unmasked_vectorised_feat, index)
+
+  # perform inference on spatially preserved features
+  # doesn't matter that masked pixels are still included in x
+  n, h, w, d2 = x.shape
+  assert(n == n_data and d2 == d)
+  x = x.reshape(n * h * w, d2)
   _, I = index.search(x, 1)
+  pseudolabels = np.array([int(n[0]) for n in I], dtype=np.int32)
+  pseudolabels = pseudolabels.reshape(n, h, w)
+
   losses = faiss.vector_to_array(clus.obj)
-
   centroids = faiss.vector_to_array(clus.centroids).reshape(clus.k, clus.d)
-  # if verbose: print('k-means loss evolution: {0}'.format(losses))
 
-  return [int(n[0]) for n in I], losses[-1], centroids
-
+  return pseudolabels, losses[-1], centroids
 
 class Kmeans:
   def __init__(self, k):
     self.k = k
 
-  def cluster(self, data, proc_feat=False, verbose=False):
+  def cluster(self, x_out, masks, proc_feat=False, verbose=False):
     """Performs k-means clustering.
         Args:
             x_data (np.array N * dim): data to cluster
     """
 
+    # get unmasked and vectorised features for training
+    n, d, h, w = x_out.shape
+    assert (masks.shape == (n, h, w))
+    assert (masks.dtype == np.bool)
+
+    x = x_out.transpose((0, 2, 3, 1))  # features last
+    unmasked_vectorised_feat = x[masks, :]
+    num_unmasked = unmasked_vectorised_feat.shape[0]
+    assert (num_unmasked == masks.sum())
+    unmasked_vectorised_feat = unmasked_vectorised_feat.reshape(num_unmasked, d)
+
     # PCA-reducing, whitening and L2-normalization
     if proc_feat:
-      data = preprocess_features(data)
+      unmasked_vectorised_feat = preprocess_features(unmasked_vectorised_feat)
 
-    # cluster the data
-    # I: data index -> k means cluster index
-    # images_lists: k means cluster index -> data index
-    # OLD:
-    I, loss, centroids = run_kmeans(data, self.k, verbose)
+    # cluster the features and perform inference on spatially uncollapsed x
+    pseudolabelled_x, loss, centroids = run_kmeans(unmasked_vectorised_feat,
+                                                   self.k, x, verbose)
 
-    # I, loss, centroids = run_our_kmeans(data, self.k)
-
+    # no need to store masks, reloaded in dataloader later
     self.centroids = centroids
-
-    # maps cluster index to
-    self.images_lists = [[] for i in range(self.k)]
-    for i in range(len(data)):
-      self.images_lists[I[i]].append(i)
-
-    # if verbose:
-    #    print('k-means time: {0:.0f} s'.format(time.time() - end))
+    self.pseudolabelled_x = pseudolabelled_x
 
     return loss

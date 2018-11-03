@@ -130,7 +130,7 @@ class Logger():
       pickle.dump(self.data, fp, -1)
 
 
-def compute_features(dataloader, model, N):
+def compute_features(args, dataloader, model, N):
   model.eval()
   # discard the label information in the dataloader
   for i, (input_tensor, _) in enumerate(dataloader):

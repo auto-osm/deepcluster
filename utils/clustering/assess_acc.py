@@ -6,7 +6,7 @@ from sklearn.utils.linear_assignment_ import linear_assignment
 def assess_acc(args, test_dataset, test_dataloader, model, num_imgs):
   # new clusterer
   deepcluster = clustering.__dict__[args.clustering](args.gt_k)
-  features = compute_features(test_dataloader, model, num_imgs)
+  features = compute_features(args, test_dataloader, model, num_imgs)
 
   assess_cluster_loss = deepcluster.cluster(features,
                                             proc_feat=args.proc_feat,
