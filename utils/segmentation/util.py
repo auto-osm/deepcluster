@@ -40,7 +40,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       x_out = model(imgs, penultimate=True).cpu().numpy()
 
     num_imgs_batch = x_out.shape[0]
-    x_out = x_out.tranpose((0, 2, 3, 1))  # features last
+    x_out = x_out.transpose((0, 2, 3, 1))  # features last
 
     x_out = x_out[mask, :]
 
