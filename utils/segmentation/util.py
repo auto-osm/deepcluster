@@ -23,6 +23,7 @@ def compute_spatial_features(args, dataloader, model, num_imgs):
       assert(x_out.shape[1] == model.module.dlen)
       assert(x_out.shape[2] == args.input_sz and
              x_out.shape[3] == args.input_sz)
+      print("%d %d %d" % (num_imgs, x_out.shape[1], args.input_sz))
       features = np.zeros((num_imgs, x_out.shape[1], args.input_sz,
                            args.input_sz), dtype=np.float32)
       masks = np.zeros((num_imgs, args.input_sz, args.input_sz), dtype=np.bool)
