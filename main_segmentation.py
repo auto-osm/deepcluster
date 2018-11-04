@@ -64,8 +64,8 @@ parser.add_argument('--proc_feat', action='store_true', default=False)
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
-                    choices=['deepcluster_net10a_seg'],
-                    default='deepcluster_net10a_seg',
+                    choices=['DeepclusterSegmentationNet10a'],
+                    default='DeepclusterSegmentationNet10a',
                     required=True)
 
 parser.add_argument('--clustering', type=str, choices=['Kmeans'],
