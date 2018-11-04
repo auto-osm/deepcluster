@@ -12,7 +12,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
 
   # n, h, w
-  features, masks = compute_spatial_features(test_dataloader, model,
+  features, masks = compute_spatial_features(args, test_dataloader, model,
                                              num_imgs)
 
   assess_cluster_loss = deepcluster.cluster(features, masks,
