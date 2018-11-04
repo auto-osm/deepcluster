@@ -6,8 +6,7 @@ from PIL import Image
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
-from code.scripts.segmentation.debug import *
+import os
 
 def render(data, mode, name, colour_map=None, out_dir=None):
   assert(out_dir is not None)
