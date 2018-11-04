@@ -82,9 +82,8 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
       print("(run_kmeans) batch %d time %s" % (i, datetime.now()))
       sysout.flush()
 
-    if len(tup) == 3: # test dataset, cpu
+    if len(tup) == 3: # test dataset, cuda
       imgs, _, _ = tup
-      imgs = imgs.cuda()
     else: # cuda
       assert(len(tup) == 2)
       imgs, _ = tup
@@ -99,10 +98,11 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
 
     with torch.no_grad():
       # penultimate = features
-      x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
+      x_out = model(imgs, penultimate=True)
+
     bn, dlen, h, w = x_out.shape
     x_out = x_out.transpose((0, 2, 3, 1))
-    x_out = x_out.reshape(bn * h * w, dlen)
+    x_out = x_out.reshape(bn * h * w, dlen).cpu().numpy().astype(np.float32)
 
     _, I = index.search(x_out, 1)
     pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)

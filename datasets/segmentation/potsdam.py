@@ -193,7 +193,7 @@ class _Potsdam(data.Dataset):
       render(mask, mode="mask", name=("test_data_mask_%d" % index))
 
     # dataloader must return tensors (conversion forced in their code anyway)
-    return img, torch.from_numpy(label), mask
+    return img.cuda(), torch.from_numpy(label).cuda(), mask.cuda()
 
   def _preload_data(self):
     for image_id in tqdm(

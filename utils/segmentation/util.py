@@ -20,10 +20,8 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
                                                                 datetime.now()))
       sysout.flush()
 
-    if len(tup) == 3: # test dataset, cpu
+    if len(tup) == 3: # test dataset, cuda
       imgs, _, mask = tup
-      imgs = imgs.cuda()
-      mask = mask.cuda()
     else: # cuda
       assert(len(tup) == 2)
       imgs, mask = tup
