@@ -51,7 +51,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   # faiss implementation of k-means
   clus = faiss.Clustering(d, nmb_clusters)
   clus.niter = 20
-  clus.max_points_per_centroid = 1000000000 # 1bn if poss
+  clus.max_points_per_centroid = 100000000 # 1bn if poss
   res = faiss.StandardGpuResources()
   flat_config = faiss.GpuIndexFlatConfig()
   flat_config.useFloat16 = False
@@ -86,16 +86,16 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     with torch.no_grad():
       # penultimate = features
       x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
-      bn, dlen, h, w = x_out.shape
-      x_out = x_out.transpose((0, 2, 3, 1))
-      x_out = x_out.reshape(bn * h * w, dlen)
+    bn, dlen, h, w = x_out.shape
+    x_out = x_out.transpose((0, 2, 3, 1))
+    x_out = x_out.reshape(bn * h * w, dlen)
 
-      _, I = index.search(x_out, 1)
-      pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
-      pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
+    _, I = index.search(x_out, 1)
+    pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
+    pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
 
-      pseudolabels[num_imgs_curr: num_imgs_curr + bn, :, :] = pseudolabels_curr
-      num_imgs_curr += bn
+    pseudolabels[num_imgs_curr: num_imgs_curr + bn, :, :] = pseudolabels_curr
+    num_imgs_curr += bn
 
   assert(num_imgs == num_imgs_curr)
 

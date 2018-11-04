@@ -62,7 +62,7 @@ parser.add_argument('--just_analyse', action='store_true', default=False)
 
 parser.add_argument('--proc_feat', action='store_true', default=False)
 
-parser.add_argument('--max_num_pixel_samples', type=int, default=1000000000)
+parser.add_argument('--max_num_pixel_samples', type=int, default=100000000)
 
 # ----
 
