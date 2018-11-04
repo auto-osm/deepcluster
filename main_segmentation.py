@@ -39,13 +39,13 @@ parser.add_argument('--model_ind', type=int, required=True)
 parser.add_argument('--k', type=int, required=True)
 parser.add_argument('--gt_k', type=int, required=True)
 
-parser.add_argument('--rand_crop_sz', type=int, default=-1)
 parser.add_argument('--input_sz', type=int, required=True)
 
 parser.add_argument('--normalize', action='store_true', default=False)
 
 parser.add_argument("--dataset", type=str, required=True)
 parser.add_argument("--dataset_root", type=str, required=True)
+parser.add_argument('--use_coarse_labels', action='store_true', default=False)
 
 parser.add_argument('--batch_sz', default=256, type=int,
                     help='mini-batch size (default: 256)')
