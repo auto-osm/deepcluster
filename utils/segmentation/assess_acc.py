@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.utils.linear_assignment_ import linear_assignment
 from ..clustering.assess_acc import analyse, compute_acc
 from datetime import datetime
-import sys.stdout as sysout
+from sys import stdout as sysout
 
 TIME = True
 

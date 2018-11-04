@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from utils.segmentation.transforms import sobel_process
 from datetime import datetime
-import sys.stdout as sysout
+from sys import stdout as sysout
 
 def compute_vectorised_features(args, dataloader, model, num_imgs):
 

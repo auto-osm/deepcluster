@@ -5,8 +5,7 @@ import torch.utils.data as data
 from clustering import preprocess_features
 from utils.segmentation.transforms import sobel_process
 from datetime import datetime
-import sys.stdout as sysout
-
+from sys import stdout as sysout
 
 __all__ = ['Kmeans', 'cluster_assign']
 
