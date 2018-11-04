@@ -224,9 +224,9 @@ def main():
 
   # create optimizer
   # top layer not created at this point!
-  assert (model.top_layer is None)
+  assert (model.module.top_layer is None)
   optimizer = torch.optim.Adam(
-    filter(lambda x: x.requires_grad, model.parameters()),
+    filter(lambda x: x.requires_grad, model.module.parameters()),
     lr=args.lr,
   )
 
@@ -399,15 +399,15 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
   """
   losses = AverageMeter()
 
-  model.set_new_top_layer()
+  model.module.set_new_top_layer()
 
   # switch to train mode
-  model.train()
+  model.module.train()
 
   # only exists within this loop, not saved
-  assert (not (model.top_layer is None))
+  assert (not (model.module.top_layer is None))
   optimizer_tl = torch.optim.Adam(
-    model.top_layer.parameters(),
+    model.module.top_layer.parameters(),
     lr=args.lr,
   )
 
@@ -424,10 +424,18 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     x_out = model(imgs)
 
     assert(isinstance(masks, torch.Tensor) and masks.dtype == torch.uint8)
-    assert(isinstance(targets, torch.Tensor))
+    assert(isinstance(targets, torch.Tensor) and targets.dtype == torch.int32)
 
-    x_out = x_out.masked_select(masks)
+    x_out.transpose((0, 2, 3, 1))
+    x_out = x_out.masked_select(masks) # broadcast
     targets = targets.masked_select(masks)
+
+    num_unmasked = masks.sum()
+
+    assert(len(x_out.shape) == 2 and (x_out.shape[0] == num_unmasked) and
+           x_out.shape[1] == args.gt_k)
+    assert((len(targets.shape) == 1) and (targets.shape[0] == num_unmasked))
+    assert(targets.min() >= 0 and targets.max() < args.gt_k)
 
     loss = crit(x_out, targets)
 
