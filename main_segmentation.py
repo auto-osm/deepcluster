@@ -451,6 +451,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
   if per_batch:
     print("num batches: %d" % len(loader))
 
+  assert(loader.dataset.datasets[0].purpose == "train")
+
   for i, (imgs, masks, targets) in enumerate(loader):
     opt.zero_grad()
     optimizer_tl.zero_grad()
@@ -467,6 +469,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     x_out = x_out.permute(0, 2, 3, 1)
     bn, h, w, dlen = x_out.shape
+
+    x_out = x_out.contiguous()
     x_out = x_out.view(bn * h * w, args.gt_k)
     targets = targets.view(bn * h * w)
     assert(targets.min() >= 0 and targets.max() < args.gt_k)

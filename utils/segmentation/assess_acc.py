@@ -26,6 +26,8 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     print("starting cluster %s" % datetime.now())
     sysout.flush()
 
+  assert(test_dataset.datasets[0].purpose == "test")
+
   assess_cluster_loss = deepcluster.cluster(args, features, test_dataloader,
                                             len(test_dataset), model,
                                         proc_feat=args.proc_feat,

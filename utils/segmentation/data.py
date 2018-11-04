@@ -45,6 +45,7 @@ def _create_loader(args, dataset_class, partitions, purpose):
     imgs_list.append(imgs_curr)
 
   imgs_dataset = ConcatDataset(imgs_list)
+
   dataloader = torch.utils.data.DataLoader(imgs_dataset,
                                 batch_size=args.batch_sz, # full batch
                                 shuffle=False, # important

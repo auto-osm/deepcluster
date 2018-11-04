@@ -186,16 +186,21 @@ class _Coco(data.Dataset):
 
   def __getitem__(self, index):
     image_id = self.files[index]
-    image, label = self._load_data(image_id)
+    image, label = self._load_data(image_id) # always exists
 
     if self.purpose == "train":
       return self._prepare_train(index, image, label)
     else:
-      assert (self.purpose == "test")
+      assert (self.purpose == "test" or self.purpose == "features")
       return self._prepare_test(index, image, label)
 
   def __len__(self):
     return len(self.files)
+
+  def set_purpose(self, new_purpose):
+    # used to switch from train or test to features, since k-means features
+    # uses plain or "test" transforms
+    self.purpose = new_purpose
 
   def _check_gt_k(self):
     raise NotImplementedError()

@@ -145,24 +145,28 @@ class _Potsdam(data.Dataset):
     #   Label map: 2D, flat int64, [0 ... sef.gt_k - 1]
     # label is passed in canonical [0 ... 181] indexing
 
-    assert(label is not None)
+    # assert(label is not None) this is also called for train (features)
 
-    assert (img.shape[:2] == label.shape)
     img = img.astype(np.float32)
-    label = label.astype(np.int32)
+
+    if label is not None:
+      assert (img.shape[:2] == label.shape)
+      label = label.astype(np.int32)
 
     # shrink original images, for memory purposes, or magnify
     if self.pre_scale_all:
       img = cv2.resize(img, dsize=None, fx=self.pre_scale_factor,
                        fy=self.pre_scale_factor,
                        interpolation=cv2.INTER_LINEAR)
-      label = cv2.resize(label, dsize=None, fx=self.pre_scale_factor,
-                         fy=self.pre_scale_factor,
-                         interpolation=cv2.INTER_NEAREST)
+      if label is not None:
+        label = cv2.resize(label, dsize=None, fx=self.pre_scale_factor,
+                           fy=self.pre_scale_factor,
+                           interpolation=cv2.INTER_NEAREST)
 
     # center crop to input sz
     img, _ = pad_and_or_crop(img, self.input_sz, mode="centre")
-    label, _ = pad_and_or_crop(label, self.input_sz, mode="centre")
+    if label is not None:
+      label, _ = pad_and_or_crop(label, self.input_sz, mode="centre")
 
     img_ir = img[:, :, 3]
     img = img[:, :, :3]
@@ -180,20 +184,25 @@ class _Potsdam(data.Dataset):
 
     img = torch.from_numpy(img).permute(2, 0, 1)
 
-    if CHECK_TEST_DATA:
+    if CHECK_TEST_DATA and label is not None:
       render(label, mode="label", name=("test_data_label_pre_%d" % index))
 
     # convert to coarse if required, reindex to [0, gt_k -1], and get mask
-    label = self._filter_label(label)
+    if label is not None:
+      label = self._filter_label(label)
     mask = torch.ones(self.input_sz, self.input_sz).to(torch.uint8)
 
     if CHECK_TEST_DATA:
       render(img, mode="image", name=("test_data_img_%d" % index))
-      render(label, mode="label", name=("test_data_label_post_%d" % index))
+      if label is not None:
+        render(label, mode="label", name=("test_data_label_post_%d" % index))
       render(mask, mode="mask", name=("test_data_mask_%d" % index))
 
     # dataloader must return tensors (conversion forced in their code anyway)
-    return img.cuda(), torch.from_numpy(label).cuda(), mask.cuda()
+    if label is not None:
+      return img.cuda(), torch.from_numpy(label).cuda(), mask.cuda()
+    else:
+      return img.cuda(), mask.cuda()
 
   def _preload_data(self):
     for image_id in tqdm(
@@ -211,12 +220,17 @@ class _Potsdam(data.Dataset):
 
     if self.purpose == "train":
       return self._prepare_train(index, image)
-    else:
-      assert (self.purpose == "test")
+    else :
+      assert (self.purpose == "test" or self.purpose == "features")
       return self._prepare_test(index, image, label)
 
   def __len__(self):
     return len(self.files)
+
+  def set_purpose(self, new_purpose):
+    # used to switch from train or test to features, since k-means features
+    # uses plain or "test" transforms
+    self.purpose = new_purpose
 
   def _check_gt_k(self):
     raise NotImplementedError()

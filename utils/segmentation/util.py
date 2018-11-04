@@ -6,6 +6,11 @@ from sys import stdout as sysout
 
 def compute_vectorised_features(args, dataloader, model, num_imgs):
 
+  datasets = dataloader.dataset.datasets # concatenated dataset
+  old_purpose = datasets[0].purpose
+  for d in datasets:
+    d.set_purpose("features")
+
   max_num_pixels_per_img = int(args.max_num_pixel_samples / num_imgs)
 
   features = np.zeros((args.max_num_pixel_samples, model.module.dlen),
@@ -20,7 +25,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
                                                                 datetime.now()))
       sysout.flush()
 
-    if len(tup) == 3: # test dataset, cuda
+    if len(tup) == 3: # "test" dataset, cuda
       imgs, _, mask = tup
     else: # cuda
       assert(len(tup) == 2)
@@ -58,5 +63,8 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
     actual_num_features += num_selected
 
   features = features[:actual_num_features, :]
+
+  for d in datasets:
+    d.set_purpose(old_purpose)
 
   return features
