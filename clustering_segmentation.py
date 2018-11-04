@@ -101,11 +101,11 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
 
     with torch.no_grad():
       # penultimate = features
-      x_out = model(imgs, penultimate=True)
+      x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
 
     bn, dlen, h, w = x_out.shape
     x_out = x_out.transpose((0, 2, 3, 1))
-    x_out = x_out.reshape(bn * h * w, dlen).cpu().numpy().astype(np.float32)
+    x_out = x_out.reshape(bn * h * w, dlen)
 
     if pca_mat is not None:
       x_out = apply_learned_preprocessing(x_out, pca_mat)
