@@ -48,7 +48,7 @@ class SegmentationNet10a(VGGNet):
                 nn.BatchNorm2d(self.dlen))
 
     self.relu = nn.ReLU(True)
-    self.out = config.gt_k
+    self.out = config.k # not the same as gt_k
     self.top_layer = None
 
     self._initialize_weights()
