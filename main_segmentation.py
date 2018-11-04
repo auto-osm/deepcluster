@@ -450,7 +450,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     assert(masks.dtype == torch.uint8)
     assert(targets.dtype == torch.int32)
 
-    x_out.transpose((0, 2, 3, 1))
+    x_out.permute(0, 2, 3, 1)
     bn, h, w, dlen = x_out.shape
     x_out = x_out.view(bn * h * w, args.gt_k)
     targets = targets.view(bn * h * w)
