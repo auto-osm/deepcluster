@@ -62,7 +62,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     vectorised_unmasked_targets[actual_num_samples:actual_num_samples +
                                                  curr_num_samples] = targets
 
-    actual_num_samples += curr_num_samples
+    actual_num_samples += curr_num_samples.item()
 
   predicted_labels = vectorised_unmasked_preds[:actual_num_samples]
   true_labels = vectorised_unmasked_targets[:actual_num_samples]

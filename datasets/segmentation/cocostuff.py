@@ -61,8 +61,6 @@ class _Coco(data.Dataset):
     self.do_rgb = config.do_rgb
     self.do_sobel = config.do_sobel
 
-    self.mask_input = config.mask_input
-
     # only used if purpose is train
     if purpose == "train":
       self.jitter_tf = tvt.ColorJitter(brightness=config.jitter_brightness,

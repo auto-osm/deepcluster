@@ -66,6 +66,10 @@ parser.add_argument('--max_num_pixel_samples', type=int, default=100000000)
 
 parser.add_argument('--debug_by_using_test', action='store_true', default=False)
 
+# Coco options
+parser.add_argument('--include_things_labels', action='store_true', default=False)
+parser.add_argument('--incl_animal_things', action='store_true', default=False)
+
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
