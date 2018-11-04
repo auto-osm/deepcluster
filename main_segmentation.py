@@ -284,8 +284,8 @@ def main():
     # model.remove_feature_head_relu()
 
     # get the features for the whole training dataset (dataset)
-    features = compute_vectorised_features(dataloader, model,
-                                                  len(dataset))
+    features = compute_vectorised_features(args, dataloader, model,
+                                           len(dataset))
 
     # find gt_k dlen centroids (using vectorised, unmasked only)
     # and storing assessment for each pixel (retain shape/masks)
@@ -299,7 +299,7 @@ def main():
     # assessment to generate new dataset)
     # get masks from original dataset
     train_dataset = clustering_segmentation.cluster_assign(
-                                              deepcluster.pseudolabelled_imgs,
+                                              deepcluster.pseudolabelled_x,
                                               dataset)
 
     # randomly sample as an approximation of evenly distributed batches
@@ -440,29 +440,27 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     opt.zero_grad()
     optimizer_tl.zero_grad()
 
-    imgs = imgs.cuda()
-    targets = targets.cuda()
+    assert(imgs.is_cuda and masks.is_cuda and targets.is_cuda)
 
     if args.do_sobel:
       imgs = sobel_process(imgs, args.do_rgb, using_IR=args.using_IR)
 
     x_out = model(imgs)
 
-    assert(isinstance(masks, torch.Tensor) and masks.dtype == torch.uint8)
-    assert(isinstance(targets, torch.Tensor) and targets.dtype == torch.int32)
+    assert(masks.dtype == torch.uint8)
+    assert(targets.dtype == torch.int32)
 
     x_out.transpose((0, 2, 3, 1))
-    x_out = x_out.masked_select(masks) # broadcast
-    targets = targets.masked_select(masks)
-
-    num_unmasked = masks.sum()
-
-    assert(len(x_out.shape) == 2 and (x_out.shape[0] == num_unmasked) and
-           x_out.shape[1] == args.gt_k)
-    assert((len(targets.shape) == 1) and (targets.shape[0] == num_unmasked))
+    bn, h, w, dlen = x_out.shape
+    x_out = x_out.view(bn * h * w, args.gt_k)
+    targets = targets.view(bn * h * w)
     assert(targets.min() >= 0 and targets.max() < args.gt_k)
 
-    loss = crit(x_out, targets)
+    loss_per_elem = crit(x_out, targets, reduction="none")
+    assert(loss_per_elem.shape == (bn * h * w,))
+    assert(masks.shape == loss_per_elem.shape)
+    loss = loss_per_elem * masks # avoid masked_select for memory
+    loss = loss.sum()
 
     # compute gradient and do gradient step
     loss.backward()
