@@ -40,7 +40,7 @@ class DeepclusterSegmentationNet10a(VGGNet):
     self.features = SegmentationNet10aTrunk(config, cfg=DeepclusterSegmentationNet10a.cfg)
 
     self.last_conv = 512
-    self.dlen = 1000
+    self.dlen = 512 # can't be 1000 - too huge
 
     # corrected, 0 padding head
     self.feature_head = nn.Sequential(nn.Conv2d(self.last_conv, self.dlen, kernel_size=1,
