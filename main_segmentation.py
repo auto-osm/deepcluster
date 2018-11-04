@@ -41,8 +41,6 @@ parser.add_argument('--gt_k', type=int, required=True)
 
 parser.add_argument('--input_sz', type=int, required=True)
 
-parser.add_argument('--normalize', action='store_true', default=False)
-
 parser.add_argument("--dataset", type=str, required=True)
 parser.add_argument("--dataset_root", type=str, required=True)
 parser.add_argument('--use_coarse_labels', action='store_true', default=False)
@@ -171,6 +169,7 @@ def main():
   distr_fig, distr_ax = plt.subplots(3, sharex=False, figsize=(20, 20))
 
   # Data ---------------------------------------------------------------------
+  assert(args.do_sobel or args.do_rgb)
 
   if args.dataset == "Potsdam":
     assert(not args.do_sobel and args.do_rgb) # IID experiment settings
