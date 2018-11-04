@@ -49,7 +49,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                                           args.input_sz), dtype=np.int32)
   actual_num_samples = 0
 
-  for _, masks, preds, targets in test_dataset: # cuda
+  for _, masks, preds, targets in test_dataset: # cuda, imgs one by one...
     curr_num_samples = masks.sum()
 
     preds = preds.masked_select(masks.unsqueeze(3)).cpu().numpy()
