@@ -5,13 +5,15 @@ def compute_spatial_features(args, dataloader, model, num_imgs):
   model.eval()
   # discard the label information in the dataloader
   for i, tup in enumerate(dataloader):
-    if len(tup) == 3: # test dataset
+    if len(tup) == 3: # test dataset, cpu
       imgs, _, mask = tup
-    else:
+      imgs = imgs.cuda()
+    else: # cuda
       assert(len(tup) == 2)
       imgs, mask = tup
+      mask = mask.cpu()
 
-    mask = mask.cpu().numpy().astype(np.bool)
+    mask = mask.numpy().astype(np.bool)
 
     with torch.no_grad():
       # penultimate = features
