@@ -5,6 +5,8 @@ import torch.utils.data as data
 from clustering import preprocess_features
 from utils.segmentation.transforms import sobel_process
 from datetime import datetime
+import sys.stdout as sysout
+
 
 __all__ = ['Kmeans', 'cluster_assign']
 
@@ -71,6 +73,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   if verbose:
     print("trained cluster, starting pseudolabel collection %s" %
           datetime.now())
+    sysout.flush()
 
   # perform inference on spatially preserved features
   # doesn't matter that masked pixels are still included
@@ -78,6 +81,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   for i, tup in enumerate(dataloader):
     if verbose and i < 10:
       print("(run_kmeans) batch %d time %s" % (i, datetime.now()))
+      sysout.flush()
 
     if len(tup) == 3: # test dataset, cpu
       imgs, _, _ = tup

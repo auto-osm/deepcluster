@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.utils.linear_assignment_ import linear_assignment
 from ..clustering.assess_acc import analyse, compute_acc
 from datetime import datetime
+import sys.stdout as sysout
 
 TIME = True
 
@@ -16,11 +17,13 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   # n, h, w
   if args.verbose:
     print("starting features %s" % datetime.now())
+    sysout.flush()
   features = compute_vectorised_features(args, test_dataloader, model,
                                                 num_imgs)
 
   if args.verbose:
     print("starting cluster %s" % datetime.now())
+    sysout.flush()
 
   assess_cluster_loss = deepcluster.cluster(args, features, test_dataloader,
                                             len(test_dataset), model,
@@ -29,6 +32,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
 
   if args.verbose:
     print("gotten pseudolabels %s" % datetime.now())
+    sysout.flush()
 
   test_dataset = clustering_segmentation.cluster_assign(
     deepcluster.pseudolabelled_imgs,
@@ -36,6 +40,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
 
   if args.verbose:
     print("gotten new dataset %s" % datetime.now())
+    sysout.flush()
 
   # maxed
   vectorised_unmasked_preds = np.zeros((num_imgs * args.input_sz *
@@ -63,6 +68,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   if args.verbose:
     print("gotten unmasked preds (pseudolabels) and targets %s" %
           datetime.now())
+    sysout.flush()
 
   assert (true_labels.min() == 0)
   assert (true_labels.max() == args.gt_k - 1)
@@ -80,20 +86,20 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     reordered_preds[predicted_labels == pred_i] = target_i
 
   if args.verbose:
-    print("doing analyse %s" %
-          datetime.now())
+    print("doing analyse %s" % datetime.now())
+    sysout.flush()
 
   distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
                                            deepcluster.centroids)
 
   if args.verbose:
-    print("doing acc %s" %
-          datetime.now())
+    print("doing acc %s" % datetime.now())
+    sysout.flush()
 
   acc = compute_acc(reordered_preds, true_labels, args.gt_k)
 
   if args.verbose:
-    print("finished assess_acc %s" %
-          datetime.now())
+    print("finished assess_acc %s" % datetime.now())
+    sysout.flush()
 
   return acc, distribution, centroid_min_max, assess_cluster_loss

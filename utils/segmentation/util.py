@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from utils.segmentation.transforms import sobel_process
 from datetime import datetime
+import sys.stdout as sysout
 
 def compute_vectorised_features(args, dataloader, model, num_imgs):
 
@@ -17,6 +18,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
     if args.verbose and i < 10:
       print("(compute_vectorised_features) batch %d time %s" % (i,
                                                                 datetime.now()))
+      sysout.flush()
 
     if len(tup) == 3: # test dataset, cpu
       imgs, _, mask = tup
