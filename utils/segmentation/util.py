@@ -45,8 +45,9 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
     x_out = x_out.masked_select(mask.unsqueeze(3))
 
     if i == 0:
-      assert(x_out.shape[1] == model.module.dlen)
+      print(x_out.shape)
       assert(len(x_out.shape) == 2)
+      assert(x_out.shape[1] == model.module.dlen)
       assert(x_out.shape[0] == num_unmasked)
 
     # select pixels randomly, and record how many selected
