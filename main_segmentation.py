@@ -26,10 +26,11 @@ import models
 from utils.clustering.util import AverageMeter, UnifLabelSampler, \
   config_to_str
 from utils.clustering.data import compute_data_stats
+from utils.segmentation.transforms import sobel_process
 
 import clustering_segmentation
 from utils.segmentation.data import make_data_segmentation
-from utils.segmentation.util import compute_spatial_features
+from utils.segmentation.util import compute_vectorised_features
 from utils.segmentation.assess_acc import assess_acc_segmentation
 
 parser = argparse.ArgumentParser(
@@ -60,6 +61,8 @@ parser.add_argument('--find_data_stats', action='store_true', default=False)
 parser.add_argument('--just_analyse', action='store_true', default=False)
 
 parser.add_argument('--proc_feat', action='store_true', default=False)
+
+parser.add_argument('--max_num_pixel_samples', type=int, default=1000000000)
 
 # ----
 
@@ -174,6 +177,7 @@ def main():
   if args.dataset == "Potsdam":
     assert(not args.do_sobel and args.do_rgb) # IID experiment settings
     args.in_channels = 4 # rgbir
+    args.using_IR = True
   elif "Coco" in args.dataset:
     # unlike image clustering script, extra sobel_and_rgb setting
     args.in_channels = 0
@@ -181,6 +185,7 @@ def main():
       args.in_channels += 3
     if args.do_sobel:
       args.in_channels += 2
+    args.using_IR = False
 
   if "Coco" in args.dataset:
     args.train_partitions = ["train2017", "val2017"]
@@ -263,12 +268,13 @@ def main():
     # model.remove_feature_head_relu()
 
     # get the features for the whole training dataset (dataset)
-    features, masks = compute_spatial_features(dataloader, model,
-                                               len(dataset))
+    features = compute_vectorised_features(dataloader, model,
+                                                  len(dataset))
 
     # find gt_k dlen centroids (using vectorised, unmasked only)
     # and storing assessment for each pixel (retain shape/masks)
-    clustering_loss = deepcluster.cluster(features, masks,
+    clustering_loss = deepcluster.cluster(args, features, dataloader,
+                                          len(dataset), model,
                                           proc_feat=args.proc_feat,
                                           verbose=args.verbose)
 
@@ -420,6 +426,9 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     imgs = imgs.cuda()
     targets = targets.cuda()
+
+    if args.do_sobel:
+      imgs = sobel_process(imgs, args.do_rgb, using_IR=args.using_IR)
 
     x_out = model(imgs)
 

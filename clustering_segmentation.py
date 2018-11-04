@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 from clustering import preprocess_features
+from utils.segmentation.transforms import sobel_process
 
 __all__ = ['Kmeans', 'cluster_assign']
 
@@ -35,7 +36,9 @@ def cluster_assign(pseudolabels, dataset):
   """
   return ReassignedDataset(pseudolabels, dataset)
 
-def run_kmeans(unmasked_vectorised_feat, nmb_clusters, x, verbose=False):
+def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
+               num_imgs, model,
+               verbose=False):
   """Runs kmeans on 1 GPU.
   Args:
       x: data
@@ -48,7 +51,7 @@ def run_kmeans(unmasked_vectorised_feat, nmb_clusters, x, verbose=False):
   # faiss implementation of k-means
   clus = faiss.Clustering(d, nmb_clusters)
   clus.niter = 20
-  clus.max_points_per_centroid = 10000000
+  clus.max_points_per_centroid = 1000000000 # 1bn if poss
   res = faiss.StandardGpuResources()
   flat_config = faiss.GpuIndexFlatConfig()
   flat_config.useFloat16 = False
@@ -58,17 +61,43 @@ def run_kmeans(unmasked_vectorised_feat, nmb_clusters, x, verbose=False):
   # perform the training
   clus.train(unmasked_vectorised_feat, index)
 
-  # perform inference on spatially preserved features
-  # doesn't matter that masked pixels are still included in x
-  n, h, w, d2 = x.shape
-  assert(n == n_data and d2 == d)
-  x = x.reshape(n * h * w, d2)
-  _, I = index.search(x, 1)
-  pseudolabels = np.array([int(n[0]) for n in I], dtype=np.int32)
-  pseudolabels = pseudolabels.reshape(n, h, w)
-
   losses = faiss.vector_to_array(clus.obj)
   centroids = faiss.vector_to_array(clus.centroids).reshape(clus.k, clus.d)
+
+  # perform inference on spatially preserved features
+  # doesn't matter that masked pixels are still included
+  num_imgs_curr = 0
+  for i, tup in enumerate(dataloader):
+    if len(tup) == 3: # test dataset, cpu
+      imgs, _, _ = tup
+      imgs = imgs.cuda()
+    else: # cuda
+      assert(len(tup) == 2)
+      imgs, _ = tup
+
+    if i == 0:
+      pseudolabels = np.zeros((num_imgs, args.input_sz, args.input_sz),
+                              dtype=np.int32)
+
+    if args.do_sobel:
+      imgs = sobel_process(imgs, args.do_rgb, using_IR=args.using_IR)
+      # now rgb(ir) and/or sobel
+
+    with torch.no_grad():
+      # penultimate = features
+      x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
+      bn, dlen, h, w = x_out.shape
+      x_out = x_out.transpose((0, 2, 3, 1))
+      x_out = x_out.reshape(bn * h * w, dlen)
+
+      _, I = index.search(x_out, 1)
+      pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
+      pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
+
+      pseudolabels[num_imgs_curr: num_imgs_curr + bn, :, :] = pseudolabels_curr
+      num_imgs_curr += bn
+
+  assert(num_imgs == num_imgs_curr)
 
   return pseudolabels, losses[-1], centroids
 
@@ -76,30 +105,29 @@ class Kmeans:
   def __init__(self, k):
     self.k = k
 
-  def cluster(self, x_out, masks, proc_feat=False, verbose=False):
+  def cluster(self, args, features, dataloader, num_imgs, model,
+              proc_feat=False,
+              verbose=False):
     """Performs k-means clustering.
         Args:
             x_data (np.array N * dim): data to cluster
     """
 
     # get unmasked and vectorised features for training
-    n, d, h, w = x_out.shape
-    assert (masks.shape == (n, h, w))
-    assert (masks.dtype == np.bool)
-
-    x = x_out.transpose((0, 2, 3, 1))  # features last
-    unmasked_vectorised_feat = x[masks, :]
-    num_unmasked = unmasked_vectorised_feat.shape[0]
-    assert (num_unmasked == masks.sum())
-    unmasked_vectorised_feat = unmasked_vectorised_feat.reshape(num_unmasked, d)
+    num_samples, d = features.shape
 
     # PCA-reducing, whitening and L2-normalization
     if proc_feat:
-      unmasked_vectorised_feat = preprocess_features(unmasked_vectorised_feat)
+      features = preprocess_features(features)
 
-    # cluster the features and perform inference on spatially uncollapsed x
-    pseudolabelled_x, loss, centroids = run_kmeans(unmasked_vectorised_feat,
-                                                   self.k, x, verbose)
+    # cluster the features and perform inference on spatially uncollapsed
+    # dataset
+
+    pseudolabelled_x, loss, centroids = run_kmeans(args, features,
+                                                   self.k,
+                                                   dataloader, num_imgs,
+                                                   model,
+                                                   verbose)
 
     # no need to store masks, reloaded in dataloader later
     self.centroids = centroids

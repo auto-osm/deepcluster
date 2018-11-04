@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 def custom_greyscale_numpy(img, include_rgb=True):
   # Takes and returns a channel-last numpy array, uint8
@@ -225,3 +226,56 @@ def random_translation(img, half_side_min, half_side_max):
   assert(img.shape[1:] == (h, w))
 
   return img
+
+# in IID code this is in clustering package; deepcluster's clustering does it
+#  in the model; for segmentation our models don't
+def sobel_process(imgs, include_rgb, using_IR=False):
+  bn, c, h, w = imgs.size()
+
+  if not using_IR:
+    if not include_rgb:
+      assert(c == 1)
+      grey_imgs = imgs
+    else:
+      assert(c == 4)
+      grey_imgs = imgs[:, 3, :, :].unsqueeze(1)
+      rgb_imgs = imgs[:, :3, :, :]
+  else:
+    if not include_rgb:
+      assert(c == 2)
+      grey_imgs = imgs[:, 0, :, :].unsqueeze(1) # underneath IR
+      ir_imgs = imgs[:, 1, :, :].unsqueeze(1)
+    else:
+      assert(c == 5)
+      rgb_imgs = imgs[:, :3, :, :]
+      grey_imgs = imgs[:, 3, :, :].unsqueeze(1)
+      ir_imgs = imgs[:, 4, :, :].unsqueeze(1)
+
+  sobel1 = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+  conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+  conv1.weight = nn.Parameter(
+    torch.Tensor(sobel1).cuda().float().unsqueeze(0).unsqueeze(0))
+  dx = conv1(grey_imgs)
+
+  sobel2 = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+  conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+  conv2.weight = nn.Parameter(
+    torch.from_numpy(sobel2).cuda().float().unsqueeze(0).unsqueeze(0))
+  dy = conv2(grey_imgs)
+
+  sobel_imgs = torch.cat([dx, dy], dim=1)
+  assert (sobel_imgs.shape == (bn, 2, h, w))
+
+  if not using_IR:
+    if include_rgb:
+      sobel_imgs = torch.cat([rgb_imgs, sobel_imgs], dim=1)
+      assert (sobel_imgs.shape == (bn, 5, h, w))
+  else:
+    if include_rgb:
+      # stick both rgb and ir back on in right order (sobel sandwiched inside)
+      sobel_imgs = torch.cat([rgb_imgs, sobel_imgs, ir_imgs], dim=1)
+    else:
+      # stick ir back on in right order (on top of sobel)
+      sobel_imgs = torch.cat([sobel_imgs, ir_imgs], dim=1)
+
+  return sobel_imgs

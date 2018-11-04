@@ -1,21 +1,21 @@
 from utils.segmentation.data import make_data_segmentation
-from utils.segmentation.util import compute_spatial_features
+from utils.segmentation.util import compute_vectorised_features
 import clustering_segmentation
 import numpy as np
 
 from sklearn.utils.linear_assignment_ import linear_assignment
 from ..clustering.assess_acc import analyse, compute_acc
 
-
 def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                             num_imgs):
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
 
   # n, h, w
-  features, masks = compute_spatial_features(args, test_dataloader, model,
-                                             num_imgs)
+  features = compute_vectorised_features(args, test_dataloader, model,
+                                                num_imgs)
 
-  assess_cluster_loss = deepcluster.cluster(features, masks,
+  assess_cluster_loss = deepcluster.cluster(args, features, test_dataloader,
+                                            len(test_dataset), model,
                                         proc_feat=args.proc_feat,
                                         verbose=args.verbose)
 
