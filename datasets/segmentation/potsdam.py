@@ -15,8 +15,8 @@ from PIL import Image
 from torch.utils import data
 from tqdm import tqdm
 
-from ...utils.segmentation.render import render
-from ...utils.segmentation.transforms import \
+from utils.segmentation.render import render
+from utils.segmentation.transforms import \
   pad_and_or_crop, random_affine, random_translation, custom_greyscale_numpy
 
 __all__ = ["Potsdam"]
