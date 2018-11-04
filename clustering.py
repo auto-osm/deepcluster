@@ -97,7 +97,7 @@ def preprocess_features(npdata):
       np.array of dim N * pca: data PCA-reduced, whitened and L2-normalized
   """
   _, ndim = npdata.shape
-  npdata = npdata.astype('float32')
+  assert(npdata.dtype== np.float32)
 
   # quarter the dimensions
   pca = int(ndim / 4.)
@@ -112,7 +112,7 @@ def preprocess_features(npdata):
   row_sums = np.linalg.norm(npdata, axis=1)
   npdata = npdata / row_sums[:, np.newaxis]
 
-  return npdata
+  return npdata, mat
 
 
 def make_graph(xb, nnn):
@@ -211,7 +211,7 @@ class Kmeans:
 
     # PCA-reducing, whitening and L2-normalization
     if proc_feat:
-      data = preprocess_features(data)
+      data, _ = preprocess_features(data)
 
     # cluster the data
     # I: data index -> k means cluster index

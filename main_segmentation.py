@@ -64,6 +64,8 @@ parser.add_argument('--proc_feat', action='store_true', default=False)
 
 parser.add_argument('--max_num_pixel_samples', type=int, default=100000000)
 
+parser.add_argument('--debug_by_using_test', action='store_true', default=False)
+
 # ----
 
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
@@ -187,15 +189,25 @@ def main():
       args.in_channels += 2
     args.using_IR = False
 
-  if "Coco" in args.dataset:
-    args.train_partitions = ["train2017", "val2017"]
-    args.test_partitions = ["train2017", "val2017"]
-  elif args.dataset == "Potsdam":
-    args.train_partitions = ["unlabelled_train", "labelled_train",
-                               "labelled_test"]
-    args.test_partitions = ["labelled_train", "labelled_test"]
+  if not args.debug_by_using_test:
+    if "Coco" in args.dataset:
+      args.train_partitions = ["train2017", "val2017"]
+      args.test_partitions = ["train2017", "val2017"]
+    elif args.dataset == "Potsdam":
+      args.train_partitions = ["unlabelled_train", "labelled_train",
+                                 "labelled_test"]
+      args.test_partitions = ["labelled_train", "labelled_test"]
+    else:
+      assert (False)
   else:
-    assert (False)
+    if "Coco" in args.dataset:
+      args.train_partitions = ["val2017"]
+      args.test_partitions = ["val2017"]
+    elif args.dataset == "Potsdam":
+      args.train_partitions = ["labelled_test"]
+      args.test_partitions = ["labelled_test"]
+    else:
+      assert (False)
 
   # load the data
   # transforms consistent with other experiments are taken care of within the

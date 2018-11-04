@@ -39,7 +39,7 @@ def cluster_assign(pseudolabels, dataset):
   return ReassignedDataset(pseudolabels, dataset)
 
 def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
-               num_imgs, model,
+               num_imgs, model, pca_mat,
                verbose=False):
   """Runs kmeans on 1 GPU.
   Args:
@@ -48,6 +48,8 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   Returns:
       list: ids of data in each cluster
   """
+
+  # d is not dlen - dimensionality reduced!
   n_data, d = unmasked_vectorised_feat.shape
 
   if verbose:
@@ -56,7 +58,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   # faiss implementation of k-means
   clus = faiss.Clustering(d, nmb_clusters)
   clus.niter = 20
-  clus.max_points_per_centroid = 100000000 # 1bn if poss
+  clus.max_points_per_centroid = 100000000
   res = faiss.StandardGpuResources()
   flat_config = faiss.GpuIndexFlatConfig()
   flat_config.useFloat16 = False
@@ -74,8 +76,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
           datetime.now())
     sysout.flush()
 
-  # perform inference on spatially preserved features
-  # doesn't matter that masked pixels are still included
+  # perform inference on spatially preserved features (incl masked)
   num_imgs_curr = 0
   for i, tup in enumerate(dataloader):
     if verbose and i < 10:
@@ -106,6 +107,9 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     x_out = x_out.transpose((0, 2, 3, 1))
     x_out = x_out.reshape(bn * h * w, dlen).cpu().numpy().astype(np.float32)
 
+    if pca_mat is not None:
+      x_out = apply_learned_preprocessing(x_out, pca_mat)
+
     _, I = index.search(x_out, 1)
     pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
     pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
@@ -116,6 +120,18 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   assert(num_imgs == num_imgs_curr)
 
   return pseudolabels, losses[-1], centroids
+
+def apply_learned_preprocessing(npdata, mat):
+  assert(len(npdata.shape) == 2)
+  assert(mat.is_trained)
+
+  npdata = mat.apply_py(npdata)
+
+  # L2 normalization
+  row_sums = np.linalg.norm(npdata, axis=1)
+  npdata = npdata / row_sums[:, np.newaxis]
+
+  return npdata
 
 class Kmeans:
   def __init__(self, k):
@@ -129,10 +145,13 @@ class Kmeans:
             x_data (np.array N * dim): data to cluster
     """
 
-    # get unmasked and vectorised features for training
-    # PCA-reducing, whitening and L2-normalization
+    # already vectorised
+    # need to use pca_mat here unlike in clustering, because inference data
+    # != training data for the clusterer
     if proc_feat:
-      features = preprocess_features(features)
+      features, pca_mat = preprocess_features(features)
+    else:
+      pca_mat = None
 
     # cluster the features and perform inference on spatially uncollapsed
     # dataset
@@ -141,6 +160,7 @@ class Kmeans:
                                                    self.k,
                                                    dataloader, num_imgs,
                                                    model,
+                                                   pca_mat,
                                                    verbose)
 
     # no need to store masks, reloaded in dataloader later

@@ -45,8 +45,6 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
     x_out = x_out[mask, :]
 
     if i == 0:
-      print(x_out.shape)
-      assert(len(x_out.shape) == 2)
       assert(x_out.shape[1] == model.module.dlen)
       assert(x_out.shape[0] == num_unmasked)
 
