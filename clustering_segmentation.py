@@ -96,6 +96,8 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
       imgs = sobel_process(imgs, args.do_rgb, using_IR=args.using_IR)
       # now rgb(ir) and/or sobel
 
+    assert(imgs.is_cuda)
+
     with torch.no_grad():
       # penultimate = features
       x_out = model(imgs, penultimate=True)

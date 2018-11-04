@@ -32,7 +32,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       imgs = sobel_process(imgs, args.do_rgb, using_IR=args.using_IR)
       # now rgb(ir) and/or sobel
 
-    assert(x_out.is_cuda)
+    assert(imgs.is_cuda)
     assert(mask.is_cuda)
 
     with torch.no_grad():
