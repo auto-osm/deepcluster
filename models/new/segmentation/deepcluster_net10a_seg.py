@@ -71,5 +71,7 @@ class DeepclusterSegmentationNet10a(VGGNet):
     self.top_layer.cuda()
     nn.init.kaiming_normal_(self.top_layer.weight, mode="fan_in",
                             nonlinearity='relu') # consistent with other convs
-    self.top_layer.bias.data.zero_()
+
+    if self.top_layer.bias is not None:
+      self.top_layer.bias.data.zero_()
 
