@@ -58,31 +58,19 @@ class _Coco(data.Dataset):
     self.pre_scale_factor = config.pre_scale_factor
     self.input_sz = config.input_sz
 
-    self.include_rgb = config.include_rgb
-    self.no_sobel = config.no_sobel
+    self.do_rgb = config.do_rgb
+    self.do_sobel = config.do_sobel
 
     self.mask_input = config.mask_input
 
     # only used if purpose is train
     if purpose == "train":
-      self.use_random_scale = config.use_random_scale
-      self.scale_max = config.scale_max
-      self.scale_min = config.scale_min
-
       self.jitter_tf = tvt.ColorJitter(brightness=config.jitter_brightness,
                                        contrast=config.jitter_contrast,
                                        saturation=config.jitter_saturation,
                                        hue=config.jitter_hue)
 
       self.flip_p = config.flip_p  # 0.5
-
-      self.use_random_affine = config.use_random_affine
-      self.aff_min_rot = config.aff_min_rot
-      self.aff_max_rot = config.aff_max_rot
-      self.aff_min_shear = config.aff_min_shear
-      self.aff_max_shear = config.aff_max_shear
-      self.aff_min_scale = config.aff_min_scale
-      self.aff_max_scale = config.aff_max_scale
 
     assert (not preload)
 
@@ -91,7 +79,6 @@ class _Coco(data.Dataset):
     self.labels = []
 
     assert(osp.exists(config.fine_to_coarse_dict))
-
     with open(config.fine_to_coarse_dict, "rb") as dict_f:
       d = pickle.load(dict_f)
       self._fine_to_coarse_dict = d["fine_index_to_coarse_index"]
@@ -116,16 +103,6 @@ class _Coco(data.Dataset):
                          fy=self.pre_scale_factor,
                          interpolation=cv2.INTER_NEAREST)
 
-    # basic augmentation transforms for both img1 and img2
-    if self.use_random_scale:
-      # bilinear interp requires float img
-      scale_factor = (np.random.rand() * (self.scale_max - self.scale_min)) + \
-                     self.scale_min
-      img = cv2.resize(img, dsize=None, fx=scale_factor, fy=scale_factor,
-                       interpolation=cv2.INTER_LINEAR)
-      label = cv2.resize(label, dsize=None, fx=scale_factor, fy=scale_factor,
-                         interpolation=cv2.INTER_NEAREST)
-
     # random crop to input sz
     img, coords = pad_and_or_crop(img, self.input_sz, mode="random")
     label, _ = pad_and_or_crop(label, self.input_sz, mode="fixed",
@@ -137,93 +114,30 @@ class _Coco(data.Dataset):
     # multiplicatively in loss
     mask_img1 = torch.from_numpy(mask_img1.astype(np.uint8)).cuda()
 
-    # make img2 different from img1 (img)
-
-    # tf_mat can be:
-    # *A, from img2 to img1 (will be applied to img2's heatmap)-> img1 space
-    #   input img1 tf: *tf.functional or pil.image
-    #   input mask tf: *none
-    #   output heatmap: *tf.functional (parallel), inverse of what is used
-    #     for inputs, create inverse of this tf in [-1, 1] format
-
-    # B, from img1 to img2 (will be applied to img1's heatmap)-> img2 space
-    #   input img1 tf: pil.image
-    #   input mask tf: pil.image (discrete)
-    #   output heatmap: tf.functional, create copy of this tf in [-1,1] format
-
-    # tf.function tf_mat: translation is opposite to what we'd expect (+ve 1
-    # is shift half towards left)
-    # but rotation is correct (-sin in top right = counter clockwise)
-
-    # flip is [[-1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    # img2 = flip(affine1_to_2(img1))
-    # => img1_space = affine1_to_2^-1(flip^-1(img2_space))
-    #               = affine2_to_1(flip^-1(img2_space))
-    # so tf_mat_img2_to_1 = affine2_to_1 * flip^-1 (order matters as not diag)
-    # flip^-1 = flip
-
-    # no need to tf label, as we're doing option A, mask needed in img1 space
-
     # converting to PIL does not change underlying np datatype it seems
-    img1 = Image.fromarray(img.astype(np.uint8))
+    img = Image.fromarray(img.astype(np.uint8))
 
-    # (img2) do jitter, no tf_mat change
-    img2 = self.jitter_tf(img1)  # not in place, new memory
-    img1 = np.array(img1)
-    img2 = np.array(img2)
+    img = self.jitter_tf(img)  # not in place, new memory
+    img = np.array(img)
 
     # channels still last
-    if not self.no_sobel:
-      img1 = custom_greyscale_numpy(img1, include_rgb=self.include_rgb)
-      img2 = custom_greyscale_numpy(img2, include_rgb=self.include_rgb)
+    if self.do_sobel:
+      img = custom_greyscale_numpy(img, include_rgb=self.do_rgb)
 
-    img1 = img1.astype(np.float32) / 255.
-    img2 = img2.astype(np.float32) / 255.
+    img = img.astype(np.float32) / 255.
 
-    # convert both to channel-first tensor format
-    # make them all cuda tensors now, except label, for optimality
-    img1 = torch.from_numpy(img1).permute(2, 0, 1).cuda()
-    img2 = torch.from_numpy(img2).permute(2, 0, 1).cuda()
-
-    # mask if required
-    if self.mask_input:
-      masked = 1 - mask_img1
-      img1[:, masked] = 0
-      img2[:, masked] = 0
-
-    # (img2) do affine if nec, tf_mat changes
-    if self.use_random_affine:
-      affine_kwargs = {"min_rot": self.aff_min_rot, "max_rot": self.aff_max_rot,
-                       "min_shear": self.aff_min_shear,
-                       "max_shear": self.aff_max_shear,
-                       "min_scale": self.aff_min_scale,
-                       "max_scale": self.aff_max_scale}
-      img2, affine1_to_2, affine2_to_1 = random_affine(img2,
-                                                       **affine_kwargs)  #
-      # tensors
-    else:
-      affine2_to_1 = torch.zeros([2, 3]).to(torch.float32).cuda()  # identity
-      affine2_to_1[0, 0] = 1
-      affine2_to_1[1, 1] = 1
+    # convert to channel-first tensor format
+    img = torch.from_numpy(img).permute(2, 0, 1).cuda()
 
     # (img2) do random flip, tf_mat changes
     if np.random.rand() > self.flip_p:
-      img2 = torch.flip(img2, dims=[2])  # horizontal, along width
-
-      # applied affine, then flip, new = flip * affine * coord
-      # (flip * affine)^-1 is just flip^-1 * affine^-1.
-      # No order swap, unlike functions...
-      # hence top row is negated
-      affine2_to_1[0, :] *= -1.
+      img = torch.flip(img, dims=[2])  # horizontal, along width
 
     if CHECK_TRAIN_DATA:
-      render(img1, mode="image", name=("train_data_img1_%d" % index))
-      render(img2, mode="image", name=("train_data_img2_%d" % index))
-      render(affine2_to_1, mode="matrix",
-             name=("train_data_affine2to1_%d" % index))
+      render(img, mode="image", name=("train_data_img1_%d" % index))
       render(mask_img1, mode="mask", name=("train_data_mask_%d" % index))
 
-    return img1, img2, affine2_to_1, mask_img1
+    return img, mask_img1
 
   def _prepare_test(self, index, img, label):
     # This returns cpu tensors.
@@ -251,8 +165,8 @@ class _Coco(data.Dataset):
     label, _ = pad_and_or_crop(label, self.input_sz, mode="centre")
 
     # finish
-    if not self.no_sobel:
-      img = custom_greyscale_numpy(img, include_rgb=self.include_rgb)
+    if self.do_sobel:
+      img = custom_greyscale_numpy(img, include_rgb=self.do_rgb)
 
     img = img.astype(np.float32) / 255.
     img = torch.from_numpy(img).permute(2, 0, 1)
@@ -263,18 +177,14 @@ class _Coco(data.Dataset):
     # convert to coarse if required, reindex to [0, gt_k -1], and get mask
     label, mask = self._filter_label(label)
 
-    # mask if required
-    if self.mask_input:
-      masked = 1 - mask
-      img[:, masked] = 0
-
     if CHECK_TEST_DATA:
       render(img, mode="image", name=("test_data_img_%d" % index))
       render(label, mode="label", name=("test_data_label_post_%d" % index))
       render(mask, mode="mask", name=("test_data_mask_%d" % index))
 
     # dataloader must return tensors (conversion forced in their code anyway)
-    return img, torch.from_numpy(label), torch.from_numpy(mask.astype(np.uint8))
+    return img.cuda(), torch.from_numpy(label).cuda(), torch.from_numpy(
+      mask.astype(np.uint8)).cuda()
 
   def __getitem__(self, index):
     image_id = self.files[index]

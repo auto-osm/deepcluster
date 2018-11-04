@@ -43,7 +43,8 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     print("gotten new dataset %s" % datetime.now())
     sysout.flush()
 
-  # maxed
+  # size is later curtailed
+  # acc is evaluated on vectorised arrays
   vectorised_unmasked_preds = np.zeros((num_imgs * args.input_sz *
                                         args.input_sz), dtype=np.int32)
   vectorised_unmasked_targets = np.zeros((num_imgs * args.input_sz *
@@ -78,11 +79,11 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
 
   # hungarian matching
   num_correct = np.zeros((args.gt_k, args.gt_k))
-  for i in xrange(num_imgs):
+  for i in xrange(actual_num_samples):
     num_correct[predicted_labels[i], true_labels[i]] += 1
-  match = linear_assignment(num_imgs - num_correct)
+  match = linear_assignment(actual_num_samples - num_correct)
 
-  reordered_preds = np.zeros(num_imgs, dtype="int")
+  reordered_preds = np.zeros(actual_num_samples, dtype="int")
   for pred_i, target_i in match:
     reordered_preds[predicted_labels == pred_i] = target_i
 
