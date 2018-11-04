@@ -35,7 +35,7 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     sysout.flush()
 
   test_dataset = clustering_segmentation.cluster_assign(
-    deepcluster.pseudolabelled_imgs,
+    deepcluster.pseudolabelled_x,
     test_dataset)
 
   if args.verbose:
