@@ -4,6 +4,7 @@ import torch
 import torch.utils.data as data
 from clustering import preprocess_features
 from utils.segmentation.transforms import sobel_process
+from datetime import datetime
 
 __all__ = ['Kmeans', 'cluster_assign']
 
@@ -48,6 +49,9 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   """
   n_data, d = unmasked_vectorised_feat.shape
 
+  if verbose:
+    print("starting cluster in run_kmeans %s" % datetime.now())
+
   # faiss implementation of k-means
   clus = faiss.Clustering(d, nmb_clusters)
   clus.niter = 20
@@ -64,10 +68,17 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   losses = faiss.vector_to_array(clus.obj)
   centroids = faiss.vector_to_array(clus.centroids).reshape(clus.k, clus.d)
 
+  if verbose:
+    print("trained cluster, starting pseudolabel collection %s" %
+          datetime.now())
+
   # perform inference on spatially preserved features
   # doesn't matter that masked pixels are still included
   num_imgs_curr = 0
   for i, tup in enumerate(dataloader):
+    if verbose and i < 10:
+      print("(run_kmeans) batch %d time %s" % (i, datetime.now()))
+
     if len(tup) == 3: # test dataset, cpu
       imgs, _, _ = tup
       imgs = imgs.cuda()
@@ -114,8 +125,6 @@ class Kmeans:
     """
 
     # get unmasked and vectorised features for training
-    num_samples, d = features.shape
-
     # PCA-reducing, whitening and L2-normalization
     if proc_feat:
       features = preprocess_features(features)
