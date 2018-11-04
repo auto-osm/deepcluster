@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from ..clustering.vgg import VGGTrunk, VGGNet
 
-__all__ = ['SegmentationNet10a']
+__all__ = ['DeepclusterSegmentationNet10a']
 
 # From first iteration of code, based on VGG11:
 # https://github.com/xu-ji/unsup/blob/master/mutual_information/networks/vggseg.py
@@ -29,15 +29,15 @@ class SegmentationNet10aTrunk(VGGTrunk):
     x = self.features(x) # do not flatten
     return x
 
-class SegmentationNet10a(VGGNet):
+class DeepclusterSegmentationNet10a(VGGNet):
   cfg = [(64, 1), (128, 1), ('M', None), (256, 1), (256, 1),
          (512, 2), (512, 2)]  # 30x30 recep field
 
   def __init__(self, config):
-    super(SegmentationNet10a, self).__init__()
+    super(DeepclusterSegmentationNet10a, self).__init__()
 
     self.input_sz = config.input_sz
-    self.features = SegmentationNet10aTrunk(config, cfg=SegmentationNet10a.cfg)
+    self.features = SegmentationNet10aTrunk(config, cfg=DeepclusterSegmentationNet10a.cfg)
 
     self.last_conv = 512
     self.dlen = 1000
