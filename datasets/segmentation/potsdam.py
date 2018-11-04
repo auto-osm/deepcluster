@@ -15,7 +15,6 @@ from PIL import Image
 from torch.utils import data
 from tqdm import tqdm
 
-from code.scripts.segmentation.debug import *
 from ...utils.segmentation.render import render
 from ...utils.segmentation.transforms import \
   pad_and_or_crop, random_affine, random_translation, custom_greyscale_numpy
