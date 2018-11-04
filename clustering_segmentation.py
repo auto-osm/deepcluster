@@ -69,10 +69,19 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   index = faiss.GpuIndexFlatL2(res, d, flat_config)
   
   """
+  ngpus = faiss.get_num_gpus()
+  print("number of GPUs %s" % ngpus)
+
+  """
+
   cpu_index = faiss.IndexFlatL2(d)
   index = faiss.index_cpu_to_all_gpus(
     cpu_index
   )
+  """
+  res = faiss.StandardGpuResources()
+  cpu_index = faiss.IndexFlatL2(d)
+  index = faiss.index_cpu_to_gpu(res, 1, cpu_index)
 
   # perform the training
   clus.train(unmasked_vectorised_feat, index)
