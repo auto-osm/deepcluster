@@ -4,9 +4,8 @@ from datetime import datetime
 import torch
 from torch.utils.data import ConcatDataset
 
-from code.scripts.segmentation.debug import *
 from datasets.segmentation import cocostuff
-from ...datasets.segmentation import potsdam
+from datasets.segmentation import potsdam
 
 def make_data_segmentation(args):
   # don't need to differentiate between mapping assign and test because
