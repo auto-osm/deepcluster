@@ -20,7 +20,7 @@ def compute_spatial_features(args, dataloader, model, num_imgs):
       x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
 
     if i == 0:
-      assert(x_out.shape[1] == model.dlen)
+      assert(x_out.shape[1] == model.module.dlen)
       assert(x_out.shape[2] == args.input_sz and
              x_out.shape[3] == args.input_sz)
       features = np.zeros((num_imgs, x_out.shape[1], args.input_sz,

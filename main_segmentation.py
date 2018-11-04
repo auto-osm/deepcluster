@@ -206,17 +206,6 @@ def main():
     sys.stdout.flush()
   model = models.__dict__[args.arch](args)
   fd = model.dlen
-  # model.features = torch.nn.DataParallel(model.features)
-  model.cuda()
-  cudnn.benchmark = True
-
-  # create optimizer
-  # top layer not created at this point!
-  assert (model.top_layer is None)
-  optimizer = torch.optim.Adam(
-    filter(lambda x: x.requires_grad, model.parameters()),
-    lr=args.lr,
-  )
 
   if args.resume:
     # remove top_layer parameters from checkpoint
@@ -228,6 +217,20 @@ def main():
         del checkpoint['state_dict'][key]
 
     model.load_state_dict(checkpoint['state_dict'])
+
+  model.cuda()
+  model = torch.nn.DataParallel(model)
+  #cudnn.benchmark = True
+
+  # create optimizer
+  # top layer not created at this point!
+  assert (model.top_layer is None)
+  optimizer = torch.optim.Adam(
+    filter(lambda x: x.requires_grad, model.parameters()),
+    lr=args.lr,
+  )
+
+  if args.resume:
     optimizer.load_state_dict(checkpoint['optimizer'])
 
   # define loss function
@@ -358,19 +361,23 @@ def main():
     distr_fig.savefig(os.path.join(args.out_dir, "distribution.png"))
 
     # model
-    if epoch % args.checkpoint_granularity == 0:
-      torch.save({'state_dict': model.state_dict(),
-                  'optimizer': optimizer.state_dict()},
-                 os.path.join(args.out_dir, "latest.pytorch"))
+    if (epoch % args.checkpoint_granularity == 0) or is_best:
+      model.module.cpu()
+      if epoch % args.checkpoint_granularity == 0:
+        torch.save({'state_dict': model.module.state_dict(),
+                    'optimizer': optimizer.state_dict()},
+                   os.path.join(args.out_dir, "latest.pytorch"))
 
-      args.epoch = epoch  # last saved checkpoint
+        args.epoch = epoch  # last saved checkpoint
 
-    if is_best:
-      torch.save({'state_dict': model.state_dict(),
-                  'optimizer': optimizer.state_dict()},
-                 os.path.join(args.out_dir, "best.pytorch"))
+      if is_best:
+        torch.save({'state_dict': model.module.state_dict(),
+                    'optimizer': optimizer.state_dict()},
+                   os.path.join(args.out_dir, "best.pytorch"))
 
-      args.best_epoch = epoch
+        args.best_epoch = epoch
+
+      model.module.cuda()
 
     # args
     with open(os.path.join(args.out_dir, "config.pickle"), 'w') as outfile:
