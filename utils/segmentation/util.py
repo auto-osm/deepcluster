@@ -26,6 +26,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       assert(len(tup) == 2)
       imgs, mask = tup
 
+    mask = mask.cpu().numpy().astype(np.bool)
     num_unmasked = mask.sum()
 
     if args.do_sobel:
@@ -33,16 +34,15 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       # now rgb(ir) and/or sobel
 
     assert(imgs.is_cuda)
-    assert(mask.is_cuda)
 
     with torch.no_grad():
       # penultimate = features
-      x_out = model(imgs, penultimate=True) # torch cuda float32
+      x_out = model(imgs, penultimate=True).cpu().numpy()
 
     num_imgs_batch = x_out.shape[0]
-    x_out = x_out.permute((0, 2, 3, 1))  # features last
+    x_out = x_out.tranpose((0, 2, 3, 1))  # features last
 
-    x_out = x_out.masked_select(mask.unsqueeze(3))
+    x_out = x_out[mask, :]
 
     if i == 0:
       print(x_out.shape)
@@ -52,12 +52,9 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
 
     # select pixels randomly, and record how many selected
     num_selected = min(num_unmasked, num_imgs_batch * max_num_pixels_per_img)
-    selected = torch.from_numpy(np.random.choice(num_selected,
-                                                 replace=False)).cuda()
+    selected = np.random.choice(num_selected, replace=False)
 
     x_out = x_out[selected, :]
-
-    x_out = x_out.cpu().numpy() # lastly
 
     features[actual_num_features:actual_num_features + num_selected, :] = x_out
     actual_num_features += num_selected
