@@ -66,6 +66,8 @@ parser.add_argument('--max_num_pixel_samples', type=int, default=100000000)
 
 parser.add_argument('--debug_by_using_test', action='store_true', default=False)
 
+parser.add_argument("--no_pre_eval", default=False, action="store_true")
+
 # Coco options
 parser.add_argument('--include_things_labels', action='store_true', default=False)
 parser.add_argument('--incl_animal_things', action='store_true', default=False)
@@ -264,23 +266,32 @@ def main():
   # clustering algorithm to use
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
 
-  if (not args.resume) or args.just_analyse:
-    print("Doing some assessment")
-    sys.stdout.flush()
-    acc, distribution, centroid_min_max, assess_cluster_loss = \
-      assess_acc_segmentation(args, test_dataset, test_dataloader, model,
-                              len(test_dataset))
-    print("got %f" % acc)
-    sys.stdout.flush()
+  if (not args.no_pre_eval):
+    if ((not args.resume) or args.just_analyse):
+      print("Doing some assessment")
+      sys.stdout.flush()
+      acc, distribution, centroid_min_max, assess_cluster_loss = \
+        assess_acc_segmentation(args, test_dataset, test_dataloader, model,
+                                len(test_dataset))
+      print("got %f" % acc)
+      sys.stdout.flush()
 
-    if args.just_analyse:
-      exit(0)
+      if args.just_analyse:
+        exit(0)
 
-    args.epoch_acc.append(acc)
-    args.epoch_assess_cluster_loss.append(assess_cluster_loss)
-    args.epoch_distribution.append(list(distribution))
-    args.epoch_centroid_min.append(centroid_min_max[0])
-    args.epoch_centroid_max.append(centroid_min_max[1])
+      args.epoch_acc.append(acc)
+      args.epoch_assess_cluster_loss.append(assess_cluster_loss)
+      args.epoch_distribution.append(list(distribution))
+      args.epoch_centroid_min.append(centroid_min_max[0])
+      args.epoch_centroid_max.append(centroid_min_max[1])
+  else:
+    # dummy
+    print("using dummy pre-eval values")
+    args.epoch_acc.append(-1)
+    args.epoch_assess_cluster_loss.append(-1)
+    args.epoch_distribution.append([-1 for _ in xrange(args.gt_k)])
+    args.epoch_centroid_min.append(-1)
+    args.epoch_centroid_max.append(-1)
 
   # Train --------------------------------------------------------------------
   for epoch in range(next_epoch, args.total_epochs):
@@ -454,7 +465,7 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     assert(masks.dtype == torch.uint8)
     assert(targets.dtype == torch.int32)
 
-    x_out.permute(0, 2, 3, 1)
+    x_out = x_out.permute(0, 2, 3, 1)
     bn, h, w, dlen = x_out.shape
     x_out = x_out.view(bn * h * w, args.gt_k)
     targets = targets.view(bn * h * w)

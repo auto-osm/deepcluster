@@ -69,8 +69,8 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   index = faiss.GpuIndexFlatL2(res, d, flat_config)
   
   """
-  ngpus = faiss.get_num_gpus()
-  print("number of GPUs %s" % ngpus)
+  if args.verbose:
+    print("number of GPUs %s" % faiss.get_num_gpus())
 
   """
 
