@@ -12,7 +12,8 @@ TIME = True
 
 def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                             num_imgs):
-  deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
+  # use gt_k here, unlike in training when using k
+  deepcluster = clustering_segmentation.__dict__[args.clustering](args.gt_k)
 
   # n, h, w
   if args.verbose:
