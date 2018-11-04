@@ -41,9 +41,8 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
 
     num_imgs_batch = x_out.shape[0]
     x_out = x_out.permute((0, 2, 3, 1))  # features last
-    print(x_out.shape)
-    print(mask.shape)
-    x_out = x_out.masked_select(mask)
+
+    x_out = x_out.masked_select(mask.unsqueeze(3))
 
     if i == 0:
       assert(x_out.shape[1] == model.module.dlen)

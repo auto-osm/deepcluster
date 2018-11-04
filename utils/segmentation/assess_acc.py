@@ -52,8 +52,8 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   for _, masks, preds, targets in test_dataset: # cuda
     curr_num_samples = masks.sum()
 
-    preds = preds.masked_select(masks).cpu().numpy()
-    targets = targets.masked_select(masks).cpu().numpy()
+    preds = preds.masked_select(masks.unsqueeze(3)).cpu().numpy()
+    targets = targets.masked_select(masks.unsqueeze(3)).cpu().numpy()
 
     vectorised_unmasked_preds[actual_num_samples:actual_num_samples +
                                                  curr_num_samples] = preds
