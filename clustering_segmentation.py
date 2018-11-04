@@ -60,11 +60,19 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   clus = faiss.Clustering(d, nmb_clusters)
   clus.niter = 20
   clus.max_points_per_centroid = 100000000
+
+  """
   res = faiss.StandardGpuResources()
   flat_config = faiss.GpuIndexFlatConfig()
   flat_config.useFloat16 = False
   flat_config.device = 0
   index = faiss.GpuIndexFlatL2(res, d, flat_config)
+  
+  """
+  cpu_index = faiss.IndexFlatL2(d)
+  index = faiss.index_cpu_to_all_gpus(
+    cpu_index
+  )
 
   # perform the training
   clus.train(unmasked_vectorised_feat, index)

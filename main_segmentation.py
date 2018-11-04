@@ -69,6 +69,10 @@ parser.add_argument('--debug_by_using_test', action='store_true', default=False)
 # Coco options
 parser.add_argument('--include_things_labels', action='store_true', default=False)
 parser.add_argument('--incl_animal_things', action='store_true', default=False)
+parser.add_argument("--fine_to_coarse_dict", type=str,
+                    default="/users/xuji/iid/iid_private/code/datasets"
+                            "/segmentation/util/out/fine_to_coarse_dict.pickle")
+parser.add_argument("--coco_164k_curated_version", type=int, default=-1)
 
 # ----
 
