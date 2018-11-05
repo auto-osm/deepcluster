@@ -261,7 +261,7 @@ def main():
     optimizer.load_state_dict(checkpoint['optimizer'])
 
   # define loss function
-  criterion = nn.CrossEntropyLoss().cuda()
+  criterion = nn.CrossEntropyLoss(reduction="none").cuda()
 
   # clustering algorithm to use
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.k)
@@ -471,14 +471,13 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     x_out = x_out.permute(0, 2, 3, 1)
     bn, h, w, dlen = x_out.shape
 
-    x_out = x_out.contiguous()
-    x_out = x_out.view(bn * h * w, args.gt_k)
-    targets = targets.view(bn * h * w)
-
     # not gt_k, which is only used in assess_acc
+    x_out = x_out.contiguous()
+    x_out = x_out.view(bn * h * w, args.k)
+    targets = targets.view(bn * h * w)
     assert(targets.min() >= 0 and targets.max() < args.k)
 
-    loss_per_elem = crit(x_out, targets, reduction="none")
+    loss_per_elem = crit(x_out, targets)
     assert(loss_per_elem.shape == (bn * h * w,))
     assert(masks.shape == loss_per_elem.shape)
     loss = loss_per_elem * masks # avoid masked_select for memory

@@ -48,7 +48,7 @@ class DeepclusterSegmentationNet10a(VGGNet):
                 nn.BatchNorm2d(self.dlen))
 
     self.relu = nn.ReLU(True)
-    self.out = config.gt_k # not config.k which is only used by kmeans
+    self.out = config.k # not config.gt_k which is only used by kmeans
     self.top_layer = None
 
     self._initialize_weights()
