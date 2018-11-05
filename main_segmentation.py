@@ -295,6 +295,7 @@ def main():
 
   # Train --------------------------------------------------------------------
   for epoch in range(next_epoch, args.total_epochs):
+    torch.cuda.empty_cache()
     # remove relu (getting features)
     # model.remove_feature_head_relu()
 
@@ -331,6 +332,8 @@ def main():
     # train network with clusters as pseudo-labels
     loss = train(train_dataloader, model, criterion, optimizer, epoch,
                  per_batch=(epoch == next_epoch))
+
+    torch.cuda.empty_cache()
 
     # assess ---------------------------------------------------------------
 
