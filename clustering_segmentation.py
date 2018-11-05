@@ -96,6 +96,12 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     sysout.flush()
 
   # perform inference on spatially preserved features (incl masked)
+
+  if eigvals is not None:
+    if (not eigvals.is_cuda):
+      eigvals = eigvals.cuda()
+      eigvecs = eigvecs.cuda()
+
   num_imgs_curr = 0
   for i, tup in enumerate(dataloader):
     if (verbose and i < 10) or (i % int(len(dataloader) / 10) == 0):
@@ -185,7 +191,7 @@ def apply_learned_preprocessing(npdata, mat):
 
 def preprocess_features_pytorch(npdata):
   # https://stats.stackexchange.com/questions/95806/how-to-whiten-the-data-using-principal-component-analysis
-  d = torch.from_numpy(npdata).cuda()
+  d = torch.from_numpy(npdata) #.cuda() can't fit
   # dlen, n
   d = d.permute(0, 1)
   dlen, n = d.shape
@@ -213,7 +219,7 @@ def apply_learned_preprocessing_pytorch(d, eig_vals, eig_vecs, cuda_permute_deme
     # demean, remove average data point
     d = d - d.mean(dim=1, keepdim=True)
 
-  print("is_cudas:")
+  print("is_cudas (false for learn, true for inference):")
   print(d.is_cuda)
   print(eig_vals.is_cuda)
   print(eig_vecs.is_cuda)
