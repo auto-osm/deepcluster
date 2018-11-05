@@ -451,7 +451,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
   if per_batch:
     print("num batches: %d" % len(loader))
 
-  assert(loader.dataset.datasets[0].purpose == "train")
+  # dataloader(reassigneddataset(concatdataset(datasets)))
+  assert(loader.dataset.base_dataset.datasets[0].purpose == "train")
 
   for i, (imgs, masks, targets) in enumerate(loader):
     opt.zero_grad()
