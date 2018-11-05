@@ -475,10 +475,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     x_out = x_out.view(bn * h * w, args.gt_k)
     targets = targets.view(bn * h * w)
 
-    print(targets.min())
-    print(targets.max())
-    print(args.gt_k)
-    assert(targets.min() >= 0 and targets.max() < args.gt_k)
+    # not gt_k, which is only used in assess_acc
+    assert(targets.min() >= 0 and targets.max() < args.k)
 
     loss_per_elem = crit(x_out, targets, reduction="none")
     assert(loss_per_elem.shape == (bn * h * w,))
