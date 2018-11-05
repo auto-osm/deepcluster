@@ -117,9 +117,17 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
 
     assert(imgs.is_cuda)
 
+    if verbose and i < 2:
+      print("(run_kmeans) through sobel %d time %s" % (i, datetime.now()))
+      sysout.flush()
+
     with torch.no_grad():
       # penultimate = features
       x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
+
+    if verbose and i < 2:
+      print("(run_kmeans) through net %d time %s" % (i, datetime.now()))
+      sysout.flush()
 
     bn, dlen, h, w = x_out.shape
     x_out = x_out.transpose((0, 2, 3, 1))
@@ -128,12 +136,32 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     if pca_mat is not None:
       x_out = apply_learned_preprocessing(x_out, pca_mat)
 
-    _, I = index.search(x_out, 1)
-    pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
-    pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
+    if verbose and i < 2:
+      print("(run_kmeans) processed feat %d time %s" % (i, datetime.now()))
+      sysout.flush()
 
+    _, I = index.search(x_out, 1)
+
+    if verbose and i < 2:
+      print("(run_kmeans) index searched %d time %s" % (i, datetime.now()))
+      print(I.__class__)
+      if isinstance(I, np.ndarray):
+        print(I.shape)
+      sysout.flush()
+
+    pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
+
+    if verbose and i < 2:
+      print("(run_kmeans) results obtained %d time %s" % (i, datetime.now()))
+      sysout.flush()
+
+    pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
     pseudolabels[num_imgs_curr: num_imgs_curr + bn, :, :] = pseudolabels_curr
     num_imgs_curr += bn
+
+    if verbose and i < 2:
+      print("(run_kmeans) stored %d time %s" % (i, datetime.now()))
+      sysout.flush()
 
   assert(num_imgs == num_imgs_curr)
 

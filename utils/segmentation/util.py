@@ -44,10 +44,20 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       # penultimate = features
       x_out = model(imgs, penultimate=True).cpu().numpy()
 
+    if args.verbose and i < 2:
+      print("(compute_vectorised_features) through model %d time %s" % (i,
+                                                                datetime.now()))
+      sysout.flush()
+
     num_imgs_batch = x_out.shape[0]
     x_out = x_out.transpose((0, 2, 3, 1))  # features last
 
     x_out = x_out[mask, :]
+
+    if args.verbose and i < 2:
+      print("(compute_vectorised_features) applied mask %d time %s" % (i,
+                                                                datetime.now()))
+      sysout.flush()
 
     if i == 0:
       assert(x_out.shape[1] == model.module.dlen)
@@ -59,8 +69,18 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
 
     x_out = x_out[selected, :]
 
+    if args.verbose and i < 2:
+      print("(compute_vectorised_features) applied select %d time %s" % (i,
+                                                                datetime.now()))
+      sysout.flush()
+
     features[actual_num_features:actual_num_features + num_selected, :] = x_out
     actual_num_features += num_selected
+
+    if args.verbose and i < 2:
+      print("(compute_vectorised_features) stored %d time %s" % (i,
+                                                                datetime.now()))
+      sysout.flush()
 
   features = features[:actual_num_features, :]
 
