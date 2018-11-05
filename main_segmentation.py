@@ -479,6 +479,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     loss_per_elem = crit(x_out, targets.to(torch.long)) # loss checks types
     assert(loss_per_elem.shape == (bn * h * w,))
+    print(masks.shape)
+    print(loss_per_elem.shape)
     assert(masks.shape == loss_per_elem.shape)
     loss = loss_per_elem * masks # avoid masked_select for memory
     loss = loss.sum()
