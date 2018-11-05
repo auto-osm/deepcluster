@@ -123,7 +123,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
 
     with torch.no_grad():
       # penultimate = features
-      x_out = model(imgs, penultimate=True).cpu().numpy().astype(np.float32)
+      x_out = model(imgs, penultimate=True).cpu().numpy()
 
     if verbose and i < 2:
       print("(run_kmeans) through net %d time %s" % (i, datetime.now()))
@@ -178,6 +178,59 @@ def apply_learned_preprocessing(npdata, mat):
   npdata = npdata / row_sums[:, np.newaxis]
 
   return npdata
+
+def preprocess_features_pytorch(npdata):
+  # https://stats.stackexchange.com/questions/95806/how-to-whiten-the-data-using-principal-component-analysis
+  d = torch.from_numpy(npdata).cuda()
+  # dlen, n
+  d = d.permute(0, 1)
+  dlen, n = d.shape
+  # demean, remove average data point
+  d = d - d.mean(dim=1, keepdim=True)
+
+  cov = d.mm(d.t())
+  cov = (cov + cov.t()) / (2 * n)
+
+  # dlen, dlen in both cases
+  eig_vals, eig_vecs = torch.symeig(cov, eigenvectors=True)
+  assert(eig_vals.shape == (dlen, dlen))
+  assert(eig_vecs.shape == (dlen, dlen))
+
+  projected = apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs)
+
+  return projected, eig_vals, eig_vecs
+
+def apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs):
+  dlen, n = d.shape
+
+  # pre-apply, eig_vecs is transposed already (row format)
+  # dlen, n
+  projected = eig_vecs.mm(d)
+  assert(projected.shape == (dlen, n))
+
+  # scale eigenvalues
+  # dlen, n
+  projected = eig_vals.pow(-0.5).mm(projected)
+  assert(projected.shape == (dlen, n))
+
+  # sort and reorder the eigenvalues
+  _, inds = torch.sort(torch.diagonal(eig_vals, 0))
+  projected = projected[inds, :]
+
+  # take the top ones
+  smaller_dlen = int(dlen / 4)
+  projected = projected[:-smaller_dlen, :]
+
+  # revert back to row order
+  projected = projected.t()
+  assert(projected.shape == (n, smaller_dlen))
+
+  # finally, l2 norm
+  norms = torch.norm(projected, p=2, dim=1, keepdim=True)
+  projected /= norms
+  assert(projected.shape == (n, smaller_dlen))
+
+  return projected
 
 class Kmeans:
   def __init__(self, k):
