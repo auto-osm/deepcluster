@@ -89,12 +89,12 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   for pred_i, target_i in match:
     reordered_preds[predicted_labels == pred_i] = target_i
 
-  if args.verbose:
-    print("doing analyse %s" % datetime.now())
-    sysout.flush()
+  #if args.verbose:
+  #  print("doing analyse %s" % datetime.now())
+  #  sysout.flush()
 
-  distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
-                                           deepcluster.centroids)
+  #distribution, centroid_min_max = analyse(reordered_preds, args.gt_k,
+  #                                         deepcluster.centroids)
 
   if args.verbose:
     print("doing acc %s" % datetime.now())
@@ -106,4 +106,6 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
     print("finished assess_acc %s" % datetime.now())
     sysout.flush()
 
-  return acc, distribution, centroid_min_max, assess_cluster_loss
+  #return acc, distribution, centroid_min_max, assess_cluster_loss
+  return acc, assess_cluster_loss
+

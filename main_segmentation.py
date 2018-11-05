@@ -160,9 +160,9 @@ def main():
     args.epoch_cluster_dist = []
     args.epoch_loss = []  # train loss
 
-    args.epoch_distribution = []
-    args.epoch_centroid_min = []
-    args.epoch_centroid_max = []
+    #args.epoch_distribution = []
+    #args.epoch_centroid_min = []
+    #args.epoch_centroid_max = []
 
     next_epoch = 0
 
@@ -181,7 +181,7 @@ def main():
   fig, axarr = plt.subplots(4, sharex=False, figsize=(20, 20))
 
   # distr
-  distr_fig, distr_ax = plt.subplots(3, sharex=False, figsize=(20, 20))
+  #distr_fig, distr_ax = plt.subplots(3, sharex=False, figsize=(20, 20))
 
   # Data ---------------------------------------------------------------------
   assert(args.do_sobel or args.do_rgb)
@@ -270,7 +270,7 @@ def main():
     if ((not args.resume) or args.just_analyse):
       print("Doing some assessment")
       sys.stdout.flush()
-      acc, distribution, centroid_min_max, assess_cluster_loss = \
+      acc, assess_cluster_loss = \
         assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                                 len(test_dataset))
       print("got %f" % acc)
@@ -281,17 +281,17 @@ def main():
 
       args.epoch_acc.append(acc)
       args.epoch_assess_cluster_loss.append(assess_cluster_loss)
-      args.epoch_distribution.append(list(distribution))
-      args.epoch_centroid_min.append(centroid_min_max[0])
-      args.epoch_centroid_max.append(centroid_min_max[1])
+      #args.epoch_distribution.append(list(distribution))
+      #args.epoch_centroid_min.append(centroid_min_max[0])
+      #args.epoch_centroid_max.append(centroid_min_max[1])
   else:
     # dummy
     print("using dummy pre-eval values")
     args.epoch_acc.append(-1)
     args.epoch_assess_cluster_loss.append(-1)
-    args.epoch_distribution.append([-1 for _ in xrange(args.gt_k)])
-    args.epoch_centroid_min.append(-1)
-    args.epoch_centroid_max.append(-1)
+    #args.epoch_distribution.append([-1 for _ in xrange(args.gt_k)])
+    #args.epoch_centroid_min.append(-1)
+    #args.epoch_centroid_max.append(-1)
 
   # Train --------------------------------------------------------------------
   for epoch in range(next_epoch, args.total_epochs):
@@ -337,7 +337,7 @@ def main():
 
     # assess ---------------------------------------------------------------
 
-    acc, distribution, centroid_min_max, assess_cluster_loss = \
+    acc, assess_cluster_loss = \
       assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                               len(test_dataset))
 
@@ -357,9 +357,9 @@ def main():
     args.epoch_loss.append(loss)
     args.epoch_cluster_dist.append(clustering_loss)
 
-    args.epoch_distribution.append(distribution)
-    args.epoch_centroid_min.append(centroid_min_max[0])
-    args.epoch_centroid_max.append(centroid_min_max[1])
+    #args.epoch_distribution.append(distribution)
+    #args.epoch_centroid_min.append(centroid_min_max[0])
+    #args.epoch_centroid_max.append(centroid_min_max[1])
 
     # draw graphs and save
     axarr[0].clear()
@@ -378,6 +378,7 @@ def main():
     axarr[3].plot(args.epoch_assess_cluster_loss)
     axarr[3].set_title("Cluster distance (assess, gt_k)")
 
+    """
     distr_ax[0].clear()
     epoch_distribution = np.array(args.epoch_distribution)
     for gt_c in xrange(args.gt_k):
@@ -391,14 +392,15 @@ def main():
     distr_ax[2].clear()
     distr_ax[2].plot(args.epoch_centroid_max)
     distr_ax[2].set_title("Centroid avg-of-abs: max")
+    """
 
     # save -----------------------------------------------------------------
     # graphs
     fig.canvas.draw_idle()
     fig.savefig(os.path.join(args.out_dir, "plots.png"))
 
-    distr_fig.canvas.draw_idle()
-    distr_fig.savefig(os.path.join(args.out_dir, "distribution.png"))
+    #distr_fig.canvas.draw_idle()
+    #distr_fig.savefig(os.path.join(args.out_dir, "distribution.png"))
 
     # model
     if (epoch % args.checkpoint_granularity == 0) or is_best:
