@@ -16,15 +16,15 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
   deepcluster = clustering_segmentation.__dict__[args.clustering](args.gt_k)
 
   # n, h, w
-  if args.verbose:
-    print("starting features %s" % datetime.now())
-    sysout.flush()
+
+  print("starting features %s" % datetime.now())
+  sysout.flush()
   features = compute_vectorised_features(args, test_dataloader, model,
                                                 num_imgs)
 
-  if args.verbose:
-    print("starting cluster %s" % datetime.now())
-    sysout.flush()
+
+  print("starting cluster %s" % datetime.now())
+  sysout.flush()
 
   assert(test_dataset.datasets[0].purpose == "test")
 
@@ -32,10 +32,6 @@ def assess_acc_segmentation(args, test_dataset, test_dataloader, model,
                                             len(test_dataset), model,
                                         proc_feat=args.proc_feat,
                                         verbose=args.verbose)
-
-  if args.verbose:
-    print("gotten pseudolabels %s" % datetime.now())
-    sysout.flush()
 
   test_dataset = clustering_segmentation.cluster_assign(
     deepcluster.pseudolabelled_x,

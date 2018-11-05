@@ -20,7 +20,7 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
   model.eval()
   # discard the label information in the dataloader
   for i, tup in enumerate(dataloader):
-    if args.verbose and i < 10:
+    if (args.verbose and i < 10) or (i % int(len(dataloader) / 10) == 0):
       print("(compute_vectorised_features) batch %d time %s" % (i,
                                                                 datetime.now()))
       sysout.flush()

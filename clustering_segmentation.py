@@ -97,7 +97,7 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
   # perform inference on spatially preserved features (incl masked)
   num_imgs_curr = 0
   for i, tup in enumerate(dataloader):
-    if verbose and i < 10:
+    if (verbose and i < 10) or (i % int(len(dataloader) / 10) == 0):
       print("(run_kmeans) batch %d time %s" % (i, datetime.now()))
       sysout.flush()
 
