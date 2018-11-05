@@ -257,7 +257,12 @@ def apply_learned_preprocessing_pytorch(d, eig_vals, eig_vecs, cuda_permute_deme
   projected /= norms
   assert(projected.shape == (n, smaller_dlen))
 
-  return projected.cpu().numpy()
+  if projected.is_cuda:
+    print("is_cuda projected")
+    return projected.cpu().numpy()
+  else:
+    print("not is_cuda projected")
+    return projected.numpy()
 
 class Kmeans:
   def __init__(self, k):
