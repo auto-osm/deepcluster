@@ -474,6 +474,10 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     x_out = x_out.contiguous()
     x_out = x_out.view(bn * h * w, args.gt_k)
     targets = targets.view(bn * h * w)
+
+    print(targets.min())
+    print(targets.max())
+    print(args.gt_k)
     assert(targets.min() >= 0 and targets.max() < args.gt_k)
 
     loss_per_elem = crit(x_out, targets, reduction="none")
