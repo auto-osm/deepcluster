@@ -41,7 +41,7 @@ def cluster_assign(pseudolabels, dataset):
   return ReassignedDataset(pseudolabels, dataset)
 
 def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
-               num_imgs, model, eigvals, eigvecs,
+               num_imgs, model, pca_mat,
                verbose=False):
   """Runs kmeans on 1 GPU.
   Args:
@@ -97,10 +97,10 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
 
   # perform inference on spatially preserved features (incl masked)
 
-  if eigvals is not None:
-    if (not eigvals.is_cuda):
-      eigvals = eigvals.cuda()
-      eigvecs = eigvecs.cuda()
+  #if eigvals is not None:
+  #  if (not eigvals.is_cuda):
+  #    eigvals = eigvals.cuda()
+  #    eigvecs = eigvecs.cuda()
 
   num_imgs_curr = 0
   for i, tup in enumerate(dataloader):
@@ -140,11 +140,11 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     x_out = x_out.transpose((0, 2, 3, 1))
     x_out = x_out.reshape(bn * h * w, dlen)
 
-    if eigvals is not None:
-      #x_out = apply_learned_preprocessing(x_out, pca_mat)
-      x_out = apply_learned_preprocessing_pytorch(x_out, eig_vals=eigvals,
-                                                  eig_vecs=eigvecs,
-                                                  cuda_permute_demean=True)
+    if pca_mat is not None:
+      x_out = apply_learned_preprocessing(x_out, pca_mat)
+      #x_out = apply_learned_preprocessing_pytorch(x_out, eig_vals=eigvals,
+      #                                            eig_vecs=eigvecs,
+      #                                            cuda_permute_demean=True)
 
     if verbose and i < 2:
       print("(run_kmeans) processed feat %d time %s" % (i, datetime.now()))
@@ -159,7 +159,8 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
         print(I.shape)
       sysout.flush()
 
-    pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
+    #pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
+    assert (pseudolabels_curr.shape == (bn * h * w))
 
     if verbose and i < 2:
       print("(run_kmeans) results obtained %d time %s" % (i, datetime.now()))
@@ -184,9 +185,18 @@ def apply_learned_preprocessing(npdata, mat):
   npdata = mat.apply_py(npdata)
 
   # L2 normalization
-  row_sums = np.linalg.norm(npdata, axis=1)
-  npdata = npdata / row_sums[:, np.newaxis]
+  # do this in cuda at least
 
+  #row_sums = np.linalg.norm(npdata, axis=1)
+  #npdata = npdata / row_sums[:, np.newaxis]
+
+  npdata = torch.from_numpy(npdata).cuda()
+  norms = torch.norm(npdata, p=2, dim=1, keepdim=True)
+  norms[norms < float_info.epsilon] = 1.0 # avoid nans
+
+  npdata /= norms
+  npdata = npdata.cpu().numpy()
+  
   return npdata
 
 def preprocess_features_pytorch(npdata):
@@ -198,7 +208,7 @@ def preprocess_features_pytorch(npdata):
   # demean, remove average data point
   d = d - d.mean(dim=1, keepdim=True)
 
-  cov = d.mm(d.t())
+  cov = d.mm(d.t()) # nope, this needed 975389GB RAM for 531 :(
   cov = (cov + cov.t()) / (2 * n)
 
   # dlen, dlen in both cases
@@ -280,11 +290,11 @@ class Kmeans:
     # need to use pca_mat here unlike in clustering, because inference data
     # != training data for the clusterer
     if proc_feat:
-      #features, pca_mat = preprocess_features(features)
-      features, eigvals, eigvecs = preprocess_features_pytorch(features)
+      features, pca_mat = preprocess_features(features)
+      #features, eigvals, eigvecs = preprocess_features_pytorch(features)
     else:
-      #pca_mat = None
-      eigvals, eigvecs = None, None
+      pca_mat = None
+      #eigvals, eigvecs = None, None
 
     # cluster the features and perform inference on spatially uncollapsed
     # dataset
@@ -293,7 +303,7 @@ class Kmeans:
                                                    self.k,
                                                    dataloader, num_imgs,
                                                    model,
-                                                   eigvals, eigvecs,
+                                                   pca_mat,
                                                    verbose)
 
     # no need to store masks, reloaded in dataloader later
