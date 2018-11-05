@@ -186,18 +186,18 @@ def apply_learned_preprocessing(npdata, mat):
   npdata = mat.apply_py(npdata)
 
   # L2 normalization
-  # do this in cuda at least
+  row_sums = np.linalg.norm(npdata, axis=1)
+  npdata = npdata / row_sums[:, np.newaxis]
 
-  #row_sums = np.linalg.norm(npdata, axis=1)
-  #npdata = npdata / row_sums[:, np.newaxis]
-
+  """
+  # this didn't speed it up
   npdata = torch.from_numpy(npdata).cuda()
   norms = torch.norm(npdata, p=2, dim=1, keepdim=True)
   norms[norms < float_info.epsilon] = 1.0 # avoid nans
 
   npdata /= norms
   npdata = npdata.cpu().numpy()
-
+  """
   return npdata
 
 def preprocess_features_pytorch(npdata):
