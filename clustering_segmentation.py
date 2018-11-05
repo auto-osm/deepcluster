@@ -193,6 +193,8 @@ def preprocess_features_pytorch(npdata):
 
   # dlen, dlen in both cases
   eig_vals, eig_vecs = torch.symeig(cov, eigenvectors=True)
+  print(eig_vals.shape)
+  print(eig_vecs.shape)
   assert(eig_vals.shape == (dlen, dlen))
   assert(eig_vecs.shape == (dlen, dlen))
 
