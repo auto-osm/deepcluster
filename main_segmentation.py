@@ -496,12 +496,14 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
     optimizer_tl.step()
 
     # record loss
-    losses.update(float(loss.data), imgs.size(0))
+    losses.update(loss.item(), imgs.size(0))
 
     if ((i % 100) == 0) or per_batch:
       print("... epoch %d batch %d train loss %f time %s" %
-            (epoch, i, float(loss.data), datetime.now()))
+            (epoch, i, loss.item(), datetime.now()))
       sys.stdout.flush()
+
+    torch.cuda.empty_cache()
 
   return losses.avg
 
