@@ -423,6 +423,8 @@ def main():
     with open(os.path.join(args.out_dir, "config.txt"), "w") as text_file:
       text_file.write("%s" % args)
 
+    if args.debug_by_using_test:
+      exit(0)
 
 def train(loader, model, crit, opt, epoch, per_batch=False):
   """Training of the CNN.
@@ -479,8 +481,8 @@ def train(loader, model, crit, opt, epoch, per_batch=False):
 
     loss_per_elem = crit(x_out, targets.to(torch.long)) # loss checks types
     assert(loss_per_elem.shape == (bn * h * w,))
-    print(masks.shape)
-    print(loss_per_elem.shape)
+
+    masks = masks.view(-1)
     assert(masks.shape == loss_per_elem.shape)
     loss = loss_per_elem * masks # avoid masked_select for memory
     loss = loss.sum()
