@@ -157,16 +157,17 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
       print(I.__class__)
       if isinstance(I, np.ndarray):
         print(I.shape)
+        print(I.size)
       sysout.flush()
 
     #pseudolabels_curr = np.array([int(n[0]) for n in I], dtype=np.int32)
-    assert (pseudolabels_curr.shape == (bn * h * w))
+    assert (I.size == (bn * h * w))
 
     if verbose and i < 2:
       print("(run_kmeans) results obtained %d time %s" % (i, datetime.now()))
       sysout.flush()
 
-    pseudolabels_curr = pseudolabels_curr.reshape(bn, h, w)
+    pseudolabels_curr = I.reshape(bn, h, w)
     pseudolabels[num_imgs_curr: num_imgs_curr + bn, :, :] = pseudolabels_curr
     num_imgs_curr += bn
 
@@ -196,7 +197,7 @@ def apply_learned_preprocessing(npdata, mat):
 
   npdata /= norms
   npdata = npdata.cpu().numpy()
-  
+
   return npdata
 
 def preprocess_features_pytorch(npdata):
