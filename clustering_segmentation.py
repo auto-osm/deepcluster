@@ -6,6 +6,7 @@ from clustering import preprocess_features
 from utils.segmentation.transforms import sobel_process
 from datetime import datetime
 from sys import stdout as sysout
+from sys import float_info
 
 __all__ = ['Kmeans', 'cluster_assign']
 
@@ -40,7 +41,7 @@ def cluster_assign(pseudolabels, dataset):
   return ReassignedDataset(pseudolabels, dataset)
 
 def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
-               num_imgs, model, pca_mat,
+               num_imgs, model, eigvals, eigvecs,
                verbose=False):
   """Runs kmeans on 1 GPU.
   Args:
@@ -133,8 +134,11 @@ def run_kmeans(args, unmasked_vectorised_feat, nmb_clusters, dataloader,
     x_out = x_out.transpose((0, 2, 3, 1))
     x_out = x_out.reshape(bn * h * w, dlen)
 
-    if pca_mat is not None:
-      x_out = apply_learned_preprocessing(x_out, pca_mat)
+    if eigvals is not None:
+      #x_out = apply_learned_preprocessing(x_out, pca_mat)
+      x_out = apply_learned_preprocessing_pytorch(x_out, eig_vals=eigvals,
+                                                  eig_vecs=eigvecs,
+                                                  cuda_permute_demean=True)
 
     if verbose and i < 2:
       print("(run_kmeans) processed feat %d time %s" % (i, datetime.now()))
@@ -193,16 +197,27 @@ def preprocess_features_pytorch(npdata):
 
   # dlen, dlen in both cases
   eig_vals, eig_vecs = torch.symeig(cov, eigenvectors=True)
-  print(eig_vals.shape)
-  print(eig_vecs.shape)
-  assert(eig_vals.shape == (dlen, dlen))
+  assert(eig_vals.shape == (dlen,))
   assert(eig_vecs.shape == (dlen, dlen))
 
-  projected = apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs)
+  projected = apply_learned_preprocessing_pytorch(d, eig_vals, eig_vecs,
+                                                  cuda_permute_demean=False)
 
   return projected, eig_vals, eig_vecs
 
-def apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs):
+def apply_learned_preprocessing_pytorch(d, eig_vals, eig_vecs, cuda_permute_demean):
+  if cuda_permute_demean:
+    d = torch.from_numpy(d).cuda()
+    # dlen, n
+    d = d.permute(0, 1)
+    # demean, remove average data point
+    d = d - d.mean(dim=1, keepdim=True)
+
+  print("is_cudas:")
+  print(d.is_cuda)
+  print(eig_vals.is_cuda)
+  print(eig_vecs.is_cuda)
+
   dlen, n = d.shape
 
   # pre-apply, eig_vecs is transposed already (row format)
@@ -212,16 +227,18 @@ def apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs):
 
   # scale eigenvalues
   # dlen, n
-  projected = eig_vals.pow(-0.5).mm(projected)
+  expanded_vals = torch.diag(eig_vals.pow(-0.5))
+  assert(expanded_vals.shape == (dlen, dlen))
+  projected = expanded_vals.mm(projected)
   assert(projected.shape == (dlen, n))
 
   # sort and reorder the eigenvalues
-  _, inds = torch.sort(torch.diagonal(eig_vals, 0))
-  projected = projected[inds, :]
+  _, inds = torch.sort(eig_vals)
+  projected = projected[inds, :] # smallest to biggest
 
   # take the top ones
   smaller_dlen = int(dlen / 4)
-  projected = projected[:-smaller_dlen, :]
+  projected = projected[-smaller_dlen:, :]
 
   # revert back to row order
   projected = projected.t()
@@ -229,10 +246,12 @@ def apply_whiten_and_norm_pytorch(d, eig_vals, eig_vecs):
 
   # finally, l2 norm
   norms = torch.norm(projected, p=2, dim=1, keepdim=True)
+  norms[norms < float_info.epsilon] = 1.0 # avoid nans
+
   projected /= norms
   assert(projected.shape == (n, smaller_dlen))
 
-  return projected
+  return projected.cpu().numpy()
 
 class Kmeans:
   def __init__(self, k):
@@ -250,9 +269,11 @@ class Kmeans:
     # need to use pca_mat here unlike in clustering, because inference data
     # != training data for the clusterer
     if proc_feat:
-      features, pca_mat = preprocess_features(features)
+      #features, pca_mat = preprocess_features(features)
+      features, eigvals, eigvecs = preprocess_features_pytorch(features)
     else:
-      pca_mat = None
+      #pca_mat = None
+      eigvals, eigvecs = None, None
 
     # cluster the features and perform inference on spatially uncollapsed
     # dataset
@@ -261,7 +282,7 @@ class Kmeans:
                                                    self.k,
                                                    dataloader, num_imgs,
                                                    model,
-                                                   pca_mat,
+                                                   eigvals, eigvecs,
                                                    verbose)
 
     # no need to store masks, reloaded in dataloader later
