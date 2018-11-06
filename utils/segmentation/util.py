@@ -31,6 +31,8 @@ def compute_vectorised_features(args, dataloader, model, num_imgs):
       assert(len(tup) == 2)
       imgs, mask = tup
 
+    # this is the only time we need to cast masks to bool (numpy mask)
+    # in training loop, multiply with tensor mask, in assess, use masked_select
     mask = mask.cpu().numpy().astype(np.bool)
     num_unmasked = mask.sum()
 
