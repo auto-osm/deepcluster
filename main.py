@@ -26,10 +26,10 @@ from datetime import datetime
 
 import clustering
 import models
-from .utils.clustering.util import AverageMeter, UnifLabelSampler, \
+from utils.clustering.util import AverageMeter, UnifLabelSampler, \
   config_to_str, compute_features
-from .utils.clustering.data import make_data, compute_data_stats
-from .utils.clustering.assess_acc import assess_acc
+from utils.clustering.data import make_data, compute_data_stats
+from utils.clustering.assess_acc import assess_acc
 import pickle
 
 
